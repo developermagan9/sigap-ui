@@ -1,0 +1,191 @@
+@import "tailwindcss";
+
+@theme {
+  /* Original SIGAP Bansos / Minimalist-UI Colors */
+  --color-paper: #f7f5ef;
+  --color-paper-2: #f1ede3;
+  --color-paper-3: #e7e1d2;
+  --color-card: #fffdf8;
+
+  --color-ink: #1c2b24;
+  --color-ink-2: #314238;
+  --color-ink-3: #65736b;
+  --color-ink-4: #8b938e;
+
+  --color-primary: #0f6b4c;
+  --color-primary-soft: #dcefe5;
+  --color-accent: #c98a2c;
+  --color-alert: #b3402a;
+  --color-line: #d8d3c4;
+  --color-chain: #2b3a67;
+
+  /* Layout mapping variables for SIAKAD-style layout components */
+  --color-surface: var(--color-card);
+  --color-canvas: var(--color-paper);
+  --color-ink-muted: var(--color-ink-3);
+
+  /* Semantic Aliases */
+  --color-sage: #0f6b4c;
+  --color-sage-2: #0c573d;
+  --color-sage-soft: #dcefe5;
+  --color-clay: #b3402a;
+  --color-clay-soft: #f4e3de;
+  --color-gold: #c98a2c;
+  --color-c0: #8f432f;
+  --color-c1: #b77e2d;
+  --color-c2: #53735d;
+  --color-c3: #7a8686;
+
+  --font-display: var(--font-fraunces), "Iowan Old Style", "Palatino Linotype", serif;
+  --font-sans: var(--font-jakarta), "Helvetica Neue", Arial, sans-serif;
+  --font-mono: var(--font-mono-jb), "SF Mono", "JetBrains Mono", monospace;
+
+  --ease-fluid: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@layer base {
+  :root {
+    --hairline: rgba(28, 43, 36, 0.1);
+    --hairline-strong: rgba(28, 43, 36, 0.16);
+    --lift-1: 0 2px 8px rgba(28, 43, 36, 0.04);
+    --lift-2: 0 8px 24px rgba(28, 43, 36, 0.05);
+  }
+
+  * {
+    border-color: var(--color-line);
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    min-height: 100dvh;
+    background:
+      radial-gradient(circle at top right, rgba(201, 138, 44, 0.05), transparent 26rem),
+      radial-gradient(circle at left 20%, rgba(15, 107, 76, 0.04), transparent 24rem),
+      var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+  }
+
+  ::selection {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-chain);
+    outline-offset: 2px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.03em;
+    line-height: 1.05;
+  }
+
+  kbd {
+    border: 1px solid var(--color-line);
+    border-radius: 4px;
+    background: var(--color-paper);
+    padding: 0.125rem 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .lift-1 {
+    box-shadow: var(--lift-1);
+  }
+
+  .lift-2 {
+    box-shadow: var(--lift-2);
+  }
+
+  .paper-grid {
+    background-image:
+      linear-gradient(var(--hairline) 1px, transparent 1px),
+      linear-gradient(90deg, var(--hairline) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent 80%);
+  }
+
+  .panel {
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    background: rgba(255, 253, 248, 0.82);
+    backdrop-filter: blur(8px);
+  }
+
+  .rule-card {
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    background: var(--color-card);
+  }
+
+  .trail-line {
+    position: absolute;
+    left: 0.3125rem;
+    top: 1.1rem;
+    bottom: 1.1rem;
+    width: 1px;
+    background-image: linear-gradient(var(--color-line) 55%, transparent 0);
+    background-size: 1px 10px;
+    background-repeat: repeat-y;
+  }
+}
+
+.grain::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  opacity: 0.02;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 600ms var(--ease-fluid),
+    transform 600ms var(--ease-fluid);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal[data-shown="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
