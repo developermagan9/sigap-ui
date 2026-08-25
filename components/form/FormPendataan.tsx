@@ -49,6 +49,8 @@ export function FormPendataan({ wilayah }: { wilayah: WilayahRow[] }) {
   const [rumah, setRumah] = useState(3);
   const [didik, setDidik] = useState(3);
   const [riwayat, setRiwayat] = useState(false);
+  const [jenisWallet, setJenisWallet] = useState<"belum" | "mandiri" | "custodial">("belum");
+  const [walletAddress, setWalletAddress] = useState("");
   const [anggota, setAnggota] = useState<Anggota[]>([
     { id: 1, nama: "", nik: "", hubungan: "kepala", lahir: "", disabilitas: false, tanggungan: false },
   ]);
@@ -75,8 +77,11 @@ export function FormPendataan({ wilayah }: { wilayah: WilayahRow[] }) {
 
     if (pendapatan && +pendapatan < 0) g.pendapatan = "Pendapatan tidak boleh negatif.";
 
+    if (jenisWallet === "mandiri" && walletAddress && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress))
+      g.wallet = "Alamat wallet harus format 0x + 40 karakter heksadesimal.";
+
     return g;
-  }, [nik, noKk, anggota, pendapatan]);
+  }, [nik, noKk, anggota, pendapatan, jenisWallet, walletAddress]);
 
   // Kolom turunan: dihitung sistem, tidak boleh diketik petugas
   const turunan = useMemo(() => {
@@ -97,6 +102,7 @@ export function FormPendataan({ wilayah }: { wilayah: WilayahRow[] }) {
     noKk.length === 16 &&
     !!pendapatan &&
     !!wilayahId &&
+    (jenisWallet !== "mandiri" || /^0x[a-fA-F0-9]{40}$/.test(walletAddress)) &&
     anggota.every((a) => a.nik.length === 16 && a.lahir && a.nama.trim());
   const bisaKirim = lengkap && Object.keys(galat).length === 0;
 
@@ -118,6 +124,8 @@ export function FormPendataan({ wilayah }: { wilayah: WilayahRow[] }) {
         skor_akses_pendidikan: didik,
         riwayat_bansos_sebelumnya: riwayat,
         periode_id: PERIODE_AKTIF_ID,
+        ...(jenisWallet === "mandiri" ? { wallet_address: walletAddress, jenis_wallet: "mandiri" } : {}),
+        ...(jenisWallet === "custodial" ? { jenis_wallet: "custodial" } : {}),
         anggota: anggota.map((a) => ({
           nik: a.nik,
           nama: a.nama,
@@ -219,6 +227,39 @@ export function FormPendataan({ wilayah }: { wilayah: WilayahRow[] }) {
                 />
                 <span className="text-[13px] text-ink-2">Pernah menerima bansos pada periode sebelumnya</span>
               </label>
+
+              {/* ---------- Wallet penerima ---------- */}
+              <div className="mt-8 border-t border-[var(--hairline)] pt-7">
+                <Eyebrow>Wallet penerima</Eyebrow>
+                <p className="mt-3 max-w-md text-[12px] leading-relaxed text-ink-3">
+                  Dana disalurkan langsung ke alamat ini saat pencairan on-chain. Kalau keluarga belum
+                  punya wallet sendiri, pilih &ldquo;custodial&rdquo; — sistem akan menyediakan wallet
+                  yang dikelola pendamping desa atas nama mereka.
+                </p>
+                <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                  <Field label="Jenis wallet">
+                    <select
+                      value={jenisWallet}
+                      onChange={(e) => setJenisWallet(e.target.value as typeof jenisWallet)}
+                      className={inputCls}
+                    >
+                      <option value="belum">Belum ditentukan</option>
+                      <option value="mandiri">Mandiri — punya wallet sendiri</option>
+                      <option value="custodial">Custodial — dikelola pendamping desa</option>
+                    </select>
+                  </Field>
+                  {jenisWallet === "mandiri" && (
+                    <Field label="Alamat wallet" hint="0x + 40 karakter" wajib error={galat.wallet}>
+                      <input
+                        value={walletAddress}
+                        onChange={(e) => setWalletAddress(e.target.value.trim())}
+                        placeholder="0x1234...5678"
+                        className={galat.wallet ? `${inputErrCls} font-mono` : `${inputCls} font-mono`}
+                      />
+                    </Field>
+                  )}
+                </div>
+              </div>
 
               {/* ---------- Anggota keluarga ---------- */}
               <div className="mt-10 border-t border-[var(--hairline)] pt-8">

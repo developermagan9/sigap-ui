@@ -147,6 +147,14 @@ export const ApiClient = {
   wilayah: {
     getAll: (token?: string) => fetchApi<WilayahRow[]>('/wilayah', { token }),
   },
+  sanggahan: {
+    create: (rumahTanggaId: string, data: { alasan: string; data_baru: Record<string, unknown> }, token?: string) =>
+      fetchApi(`/rumah-tangga/${rumahTanggaId}/sanggahan`, { method: 'POST', body: JSON.stringify(data), token }),
+    getAll: (status?: string, token?: string) =>
+      fetchApi<any[]>(`/sanggahan${status ? `?status=${status}` : ''}`, { token }),
+    review: (id: string, data: { status: 'diterima' | 'ditolak'; catatan?: string }, token?: string) =>
+      fetchApi(`/sanggahan/${id}/review`, { method: 'PATCH', body: JSON.stringify(data), token }),
+  },
   mining: {
     runClustering: (id: string, data: any, token?: string) => fetchApi(`/periode-program/${id}/run-clustering`, { method: 'POST', body: JSON.stringify(data), token }),
     getClustering: (id: string, token?: string) => fetchApi<{ clusters: any[] }>(`/periode-program/${id}/clustering-result`, { token }),

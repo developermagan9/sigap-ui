@@ -34,6 +34,21 @@ export async function createRumahTangga(data: Record<string, unknown>) {
   return result;
 }
 
+export async function ajukanSanggahan(rumahTanggaId: string, alasan: string, dataBaru: Record<string, unknown>) {
+  const token = await getToken();
+  const result = await ApiClient.sanggahan.create(rumahTanggaId, { alasan, data_baru: dataBaru }, token);
+  revalidatePath("/petugas/riwayat");
+  revalidatePath("/admin/sanggahan");
+  return result;
+}
+
+export async function reviewSanggahan(id: string, status: "diterima" | "ditolak", catatan?: string) {
+  const token = await getToken();
+  const result = await ApiClient.sanggahan.review(id, { status, catatan }, token);
+  revalidatePath("/admin/sanggahan");
+  return result;
+}
+
 export async function runClustering(periodeId: string, k?: number) {
   const token = await getToken();
   const result = await ApiClient.mining.runClustering(periodeId, { k }, token);

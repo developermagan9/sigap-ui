@@ -31,6 +31,27 @@ export function standardize(X: Vec[]): { z: Vec[]; mean: number[]; std: number[]
 
 const dist2 = (a: Vec, b: Vec) => a.reduce((s, v, i) => s + (v - b[i]) ** 2, 0);
 
+/**
+ * Klasifikasi tiap baris ke centroid TERDEKAT yang sudah ada (bukan menjalankan
+ * ulang K-Means). Dipakai saat kita punya centroid resmi tapi assignment per
+ * baris tidak/tidak lagi tersimpan — cara ini deterministik dan tidak
+ * tersandung isu re-run K-Means++ yang hasilnya bisa beda kalau urutan baris
+ * inputnya beda (lihat catatan di ClusterBubbleChart). Ini sebuah aproksimasi:
+ * baris yang persis di perbatasan dua cluster bisa saja diklasifikasikan beda
+ * dari assignment asli, tapi tidak akan meleset jauh seperti re-run acak.
+ */
+export function assignNearestCentroid(X: Vec[], centroids: Vec[]): number[] {
+  return X.map((row) => {
+    let best = 0;
+    let bestD = Infinity;
+    centroids.forEach((c, i) => {
+      const d = dist2(row, c);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    return best;
+  });
+}
+
 export type KMeansResult = {
   assign: number[];
   centroids: Vec[];

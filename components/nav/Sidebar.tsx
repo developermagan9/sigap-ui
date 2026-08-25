@@ -21,6 +21,7 @@ const MENU_ITEMS = {
   admin: [
     { href: `/admin/periode/${PERIODE_AKTIF_ID}`, label: "Dashboard Program", icon: "ph:chart-bar-duotone" },
     { href: "/admin/verifikasi", label: "Verifikasi Data", icon: "ph:check-circle-duotone" },
+    { href: "/admin/sanggahan", label: "Sanggahan Data", icon: "ph:chat-centered-text-duotone" },
     { href: "/admin/clustering", label: "Analisis Clustering", icon: "ph:intersect-duotone" },
     { href: "/admin/clustering/hasil", label: "Hasil Clustering", icon: "ph:chart-scatter-duotone" },
     { href: "/admin/bobot", label: "Konfigurasi Bobot", icon: "ph:sliders-duotone" },
@@ -32,6 +33,7 @@ const MENU_ITEMS = {
   ],
   verifikator: [
     { href: "/admin/verifikasi", label: "Verifikasi Data", icon: "ph:check-circle-duotone" },
+    { href: "/admin/sanggahan", label: "Sanggahan Data", icon: "ph:chat-centered-text-duotone" },
     { href: "/", label: "Portal Publik", icon: "ph:globe-hemisphere-west-duotone" },
   ],
   petugas: [

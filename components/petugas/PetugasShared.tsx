@@ -3,6 +3,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { ArrowRight, Check, Doc, Ledger, Users } from "@/components/ui/Icons";
 import { angka, persen, rupiah, waktu } from "@/lib/format";
+import { AjukanKoreksi } from "./AjukanKoreksi";
 import type { RumahTanggaRow } from "@/lib/api";
 
 export function SummaryRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
@@ -146,6 +147,7 @@ export function RiwayatList({ items }: { items: RumahTanggaRow[] }) {
               </div>
               <p className="mt-3 text-[15px] text-[var(--color-ink)]">{entry.desa}</p>
               <p className="mt-1 text-[13px] leading-6 text-[var(--color-ink-3)]">{entry.note}</p>
+              <AjukanKoreksi rumahTanggaId={entry.id} pendapatanSaatIni={entry.pendapatanPerKapita} />
             </div>
             <div className="sm:text-right">
               <p className="font-mono text-[13px]">{rupiah(entry.pendapatanPerKapita)}/kapita</p>
