@@ -135,6 +135,22 @@
     background: var(--color-card);
   }
 
+  /* Halaman internal (admin/petugas) — sistem/proses, bukan editorial.
+     Poppins + Inter, dioper lewat cascade var() ke seluruh heading & body
+     di dalam subtree ini tanpa perlu ubah className tiap komponen. */
+  .font-system {
+    --font-display: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+    --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .font-system h1,
+  .font-system h2,
+  .font-system h3,
+  .font-system h4 {
+    letter-spacing: -0.01em;
+    line-height: 1.15;
+  }
+
   .trail-line {
     position: absolute;
     left: 0.3125rem;

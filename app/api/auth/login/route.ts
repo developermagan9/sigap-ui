@@ -17,10 +17,10 @@ export async function POST(request: Request) {
     }
 
     const data = await loginRes.json();
-    // Assuming backend returns { access_token: string, role: string, ... }
+    // Backend login response tidak menyertakan username kembali — pakai yang
+    // sudah dikirim di request ini (sudah tervalidasi oleh keberhasilan login).
     const role = data.role;
-    const serverUsername = data.username;
-    
+
     // We want to return a JSON response so the client component can redirect.
     // Setting cookies on the response:
     const response = NextResponse.json({ success: true, role });
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 8, // 8 hours
     });
 
-    response.cookies.set("sigap_username", serverUsername, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 8 });
+    response.cookies.set("sigap_username", username, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 8 });
 
     response.cookies.set("sigap_role", role, {
       httpOnly: true,

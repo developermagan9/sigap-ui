@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 
+const PERIODE_AKTIF_ID = 'a1234567-89ab-4def-8123-456789abcdef';
+
 const CREDS = {
-  admin: { username: 'admin', password: 'password123', redirect: '/admin/periode/12' },
+  admin: { username: 'admin', password: 'password123', redirect: `/admin/periode/${PERIODE_AKTIF_ID}` },
   verifikator: { username: 'verifikator', password: 'password123', redirect: '/admin/verifikasi' },
   petugas: { username: 'petugas', password: 'password123', redirect: '/petugas/tugas' },
 };
@@ -49,7 +51,7 @@ test.describe('Login', () => {
 
   test('logout clears session and re-locks protected routes', async ({ page }) => {
     await login(page, 'admin', 'password123');
-    await page.waitForURL('**/admin/periode/12');
+    await page.waitForURL(`**/admin/periode/${PERIODE_AKTIF_ID}`);
 
     await page.goto('/api/auth/logout');
     await page.waitForURL('/');

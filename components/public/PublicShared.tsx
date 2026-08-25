@@ -38,6 +38,7 @@ export function PublicSubnav() {
   const items = [
     { href: "/", label: "Beranda" },
     { href: `/program/${PROGRAM.id}`, label: "Detail Program" },
+    { href: "/pencairan", label: "Pencairan" },
     { href: "/transaksi", label: "Jejak Transaksi" },
     { href: "/metodologi", label: "Metodologi" },
     { href: "/cek-status", label: "Cek Status" },

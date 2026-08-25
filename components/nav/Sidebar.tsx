@@ -5,22 +5,29 @@ import { usePathname } from "next/navigation";
 import { ClientIcon } from "./ClientIcon";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { LogoutButton } from "./LogoutButton";
+import { PERIODE_AKTIF_ID } from "@/lib/constants";
 
-type Role = "admin" | "verifikator" | "petugas" | "public" | "ITSUP";
+type Role = "admin" | "verifikator" | "petugas" | "public";
 
 const MENU_ITEMS = {
   public: [
     { href: "/", label: "Beranda", icon: "ph:house-line-duotone" },
+    { href: "/pencairan", label: "Pencairan", icon: "ph:currency-circle-dollar-duotone" },
     { href: "/transaksi", label: "Transaksi Publik", icon: "ph:link-duotone" },
     { href: "/metodologi", label: "Metodologi", icon: "ph:math-operations-duotone" },
     { href: "/cek-status", label: "Cek Status Bansos", icon: "ph:magnifying-glass-duotone" },
     { href: "/login", label: "Masuk", icon: "ph:sign-in-duotone" },
   ],
   admin: [
-    { href: "/admin/periode/12", label: "Dashboard Program", icon: "ph:chart-bar-duotone" },
-    { href: "/admin/clustering", label: "Analisis Clustering", icon: "ph:intersect-duotone" },
+    { href: `/admin/periode/${PERIODE_AKTIF_ID}`, label: "Dashboard Program", icon: "ph:chart-bar-duotone" },
     { href: "/admin/verifikasi", label: "Verifikasi Data", icon: "ph:check-circle-duotone" },
+    { href: "/admin/clustering", label: "Analisis Clustering", icon: "ph:intersect-duotone" },
+    { href: "/admin/clustering/hasil", label: "Hasil Clustering", icon: "ph:chart-scatter-duotone" },
+    { href: "/admin/bobot", label: "Konfigurasi Bobot", icon: "ph:sliders-duotone" },
+    { href: "/admin/ranking", label: "Hasil Ranking", icon: "ph:list-numbers-duotone" },
+    { href: "/admin/approval", label: "Review & Approval", icon: "ph:seal-check-duotone" },
     { href: "/admin/on-chain", label: "Penyaluran On-chain", icon: "ph:currency-circle-dollar-duotone" },
+    { href: "/admin/audit-log", label: "Audit Log", icon: "ph:clock-counter-clockwise-duotone" },
     { href: "/", label: "Portal Publik", icon: "ph:globe-hemisphere-west-duotone" },
   ],
   verifikator: [
@@ -29,22 +36,28 @@ const MENU_ITEMS = {
   ],
   petugas: [
     { href: "/petugas/tugas", label: "Tugas Pendataan", icon: "ph:clipboard-text-duotone" },
+    { href: "/petugas/pendataan", label: "Form Input", icon: "ph:note-pencil-duotone" },
+    { href: "/petugas/konfirmasi", label: "Konfirmasi", icon: "ph:paper-plane-tilt-duotone" },
+    { href: "/petugas/riwayat", label: "Riwayat", icon: "ph:clock-counter-clockwise-duotone" },
     { href: "/", label: "Portal Publik", icon: "ph:globe-hemisphere-west-duotone" },
   ],
-  ITSUP: [
-    { href: "/admin/periode/12", label: "Dashboard Program", icon: "ph:chart-bar-duotone" },
-    { href: "/admin/clustering", label: "Analisis Clustering", icon: "ph:intersect-duotone" },
-    { href: "/admin/verifikasi", label: "Verifikasi Data", icon: "ph:check-circle-duotone" },
-    { href: "/admin/on-chain", label: "Penyaluran On-chain", icon: "ph:currency-circle-dollar-duotone" },
-    { href: "/petugas/tugas", label: "Tugas Pendataan", icon: "ph:clipboard-text-duotone" },
-    { href: "/", label: "Portal Publik", icon: "ph:globe-hemisphere-west-duotone" },
-  ]
 };
 
 export function Sidebar({ initialRole, isSuper }: { initialRole: string; isSuper: boolean }) {
   const pathname = usePathname();
-  const role: Role = isSuper ? "ITSUP" : ((initialRole as Role) || "public");
+  // Menu mengikuti role aktif (initialRole) apa adanya — termasuk untuk ITSUP,
+  // supaya berpindah role lewat RoleSwitcher benar-benar mengganti menu yang
+  // tampil, bukan selalu menu gabungan superuser.
+  const role: Role = (initialRole as Role) || "public";
   const items = MENU_ITEMS[role] || MENU_ITEMS.public;
+
+  // Longest-prefix-wins: dengan rute sibling seperti /admin/clustering dan
+  // /admin/clustering/hasil, cocokkan hanya item yang paling spesifik supaya
+  // tidak dua-duanya menyala sekaligus.
+  const activeHref = items
+    .map((item) => item.href)
+    .filter((href) => pathname === href || (href !== "/" && pathname.startsWith(`${href}/`)))
+    .sort((a, b) => b.length - a.length)[0];
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-[var(--color-line)] bg-[rgba(247,245,239,0.96)] backdrop-blur-md px-4 py-4 xl:w-80 lg:flex text-[var(--color-ink)]">
@@ -61,7 +74,7 @@ export function Sidebar({ initialRole, isSuper }: { initialRole: string; isSuper
       <div className="flex-1 overflow-y-auto mt-2">
         <nav className="space-y-1">
           {items.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            const isActive = item.href === activeHref;
             return (
               <Link
                 key={item.href}

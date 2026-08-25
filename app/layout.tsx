@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Inter, Poppins } from "next/font/google";
 import { cookies } from "next/headers";
 import "./globals.css";
 import { Sidebar } from "@/components/nav/Sidebar";
@@ -27,6 +28,22 @@ const mono = localFont({
   display: "swap",
 });
 
+// Dipakai khusus di dalam .font-system (halaman admin/petugas) — lihat globals.css.
+// Portal publik tetap pakai Fraunces/Jakarta di atas.
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-poppins",
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "SIGAP-Bansos — Distribusi Bantuan Sosial Tepat Sasaran",
   description:
@@ -40,7 +57,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const isSuper = usernameCookie === "ITSUP";
 
   return (
-    <html lang="id" className={`${fraunces.variable} ${jakarta.variable} ${mono.variable}`}>
+    <html
+      lang="id"
+      className={`${fraunces.variable} ${jakarta.variable} ${mono.variable} ${poppins.variable} ${inter.variable}`}
+    >
       <body className="grain min-h-dvh antialiased">
         <Sidebar initialRole={roleCookie} isSuper={isSuper} />
         
@@ -54,7 +74,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <Footer />
         </div>
 
-        <MobileNav initialRole={roleCookie} isSuper={isSuper} />
+        <MobileNav initialRole={roleCookie} />
       </body>
     </html>
   );

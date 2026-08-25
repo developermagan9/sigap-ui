@@ -1,39 +1,36 @@
+import { cookies } from "next/headers";
 import { RuangKerja } from "@/components/admin/RuangKerja";
 import { Reveal } from "@/components/ui/Reveal";
-import { AdminAsideSummary, AdminHero, AdminSubnav, BobotList } from "@/components/admin/AdminShared";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { BobotList } from "@/components/admin/AdminShared";
+import { ApiClient } from "@/lib/api";
+import { PERIODE_AKTIF_ID } from "@/lib/constants";
 
-export default function HalamanBobot() {
+export default async function HalamanBobot() {
+  const token = (await cookies()).get("sigap_token")?.value;
+  const [periode, ranking] = await Promise.all([
+    ApiClient.periode.getById(PERIODE_AKTIF_ID, token),
+    ApiClient.mining.getRanking(PERIODE_AKTIF_ID, token),
+  ]);
+
   return (
-    <main className="overflow-x-hidden pb-24 pt-20 sm:pb-32">
-      <AdminSubnav />
+    <main className="overflow-x-hidden pb-16 pt-8">
+      <div className="mx-auto max-w-[78rem] px-4 sm:px-4">
+        <PageHeader
+          eyebrow="Portal Admin"
+          title="Konfigurasi Bobot TOPSIS"
+          description="Bobot resmi terpisah dari simulasi — uji dampak perubahan sebelum re-run ranking."
+        />
+      </div>
 
-      <AdminHero
-        eyebrow="Portal Admin · Konfigurasi Bobot TOPSIS"
-        title={
-          <>
-            Bobot harus bisa
-            <br />
-            diuji, bukan disembunyikan.
-          </>
-        }
-        body={
-          <>
-            Layar ini memisahkan bobot resmi dari simulasi. Tim kebijakan bisa menguji dampak
-            perubahan bobot sebelum melakukan re-run ranking, tanpa mengubah keputusan final yang
-            sudah berlaku.
-          </>
-        }
-        aside={<AdminAsideSummary />}
-      />
-
-      <section className="px-4 pb-20 sm:px-8 sm:pb-28">
+      <section className="px-4 pt-8 pb-16 sm:px-8">
         <div className="mx-auto grid max-w-[78rem] gap-5 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
           <Reveal>
             <section className="rule-card p-6 sm:p-8">
               <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-ink-3)]">Bobot resmi saat ini</p>
               <h2 className="mt-4 text-[2rem]">Empat kriteria, satu keputusan yang bisa diuji ulang</h2>
               <div className="mt-6">
-                <BobotList />
+                <BobotList bobot={periode.bobotKriteria} />
               </div>
             </section>
           </Reveal>
@@ -51,7 +48,15 @@ export default function HalamanBobot() {
       </section>
 
       <section className="py-5">
-        <RuangKerja />
+        <RuangKerja
+          periodeId={PERIODE_AKTIF_ID}
+          initialBobot={periode.bobotKriteria}
+          initialRanking={ranking.results as any}
+          clusterIndexTarget={periode.clusterPrioritas}
+          nominalDasar={periode.nominalDasar}
+          biayaOperasional={periode.biayaOperasional}
+          terkunci={periode.status === "approved" || periode.status === "disbursed"}
+        />
       </section>
     </main>
   );

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ClientIcon } from "./ClientIcon";
+import { PERIODE_AKTIF_ID } from "@/lib/constants";
 
 const MOBILE_MENU = {
   public: [
@@ -12,7 +13,7 @@ const MOBILE_MENU = {
     { href: "/login", label: "Masuk", icon: "ph:sign-in-duotone" },
   ],
   admin: [
-    { href: "/admin/periode/12", label: "Dashboard", icon: "ph:chart-bar-duotone" },
+    { href: `/admin/periode/${PERIODE_AKTIF_ID}`, label: "Dashboard", icon: "ph:chart-bar-duotone" },
     { href: "/admin/verifikasi", label: "Verifikasi", icon: "ph:check-circle-duotone" },
     { href: "/admin/on-chain", label: "On-chain", icon: "ph:currency-circle-dollar-duotone" },
   ],
@@ -24,16 +25,13 @@ const MOBILE_MENU = {
     { href: "/petugas/tugas", label: "Tugas", icon: "ph:clipboard-text-duotone" },
     { href: "/", label: "Publik", icon: "ph:globe-hemisphere-west-duotone" },
   ],
-  ITSUP: [
-    { href: "/admin/periode/12", label: "Dashboard", icon: "ph:chart-bar-duotone" },
-    { href: "/admin/verifikasi", label: "Verifikasi", icon: "ph:check-circle-duotone" },
-    { href: "/petugas/tugas", label: "Tugas", icon: "ph:clipboard-text-duotone" },
-  ]
 };
 
-export function MobileNav({ initialRole, isSuper }: { initialRole: string; isSuper: boolean }) {
+export function MobileNav({ initialRole }: { initialRole: string }) {
   const pathname = usePathname();
-  const role = isSuper ? "ITSUP" : (initialRole || "public");
+  // Menu mengikuti role aktif apa adanya (sama seperti Sidebar desktop) —
+  // supaya ganti role lewat RoleSwitcher benar-benar mengganti menu yang tampil.
+  const role = initialRole || "public";
   const items = MOBILE_MENU[role as keyof typeof MOBILE_MENU] || MOBILE_MENU.public;
 
   return (

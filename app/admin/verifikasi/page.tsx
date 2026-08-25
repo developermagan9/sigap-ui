@@ -1,40 +1,46 @@
+import { cookies } from "next/headers";
 import { Antrean } from "@/components/verifikator/Antrean";
-import { AdminAsideSummary, AdminHero, AdminStatsGrid, AdminSubnav } from "@/components/admin/AdminShared";
-import { dataset } from "@/lib/mock/data";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { AdminStatsGrid } from "@/components/admin/AdminShared";
+import { ApiClient } from "@/lib/api";
+import { PERIODE_AKTIF_ID } from "@/lib/constants";
 import { angka } from "@/lib/format";
 
-export default function HalamanVerifikasiAdmin() {
-  const semua = dataset.semua;
-  const menunggu = semua.filter((r) => r.statusVerifikasi === "pending");
-  const ditandai = semua.filter((r) => r.flaggedDuplicate);
-  const antrean = [...menunggu, ...ditandai.filter((r) => r.statusVerifikasi !== "pending")];
+export default async function HalamanVerifikasiAdmin() {
+  const token = (await cookies()).get("sigap_token")?.value;
+
+  const [rumahTangga, summary, periode] = await Promise.all([
+    ApiClient.rumahTangga.getAll({ periode_id: PERIODE_AKTIF_ID, limit: 100 }, token),
+    ApiClient.periode.getSummary(PERIODE_AKTIF_ID, token),
+    ApiClient.periode.getById(PERIODE_AKTIF_ID, token),
+  ]);
+
+  // Antrean = berkas yang belum diputuskan. Berkas yang ditandai (flaggedDuplicate)
+  // tetap tampil selama masih pending, tapi tidak lagi muncul selamanya begitu
+  // sudah diputuskan verifikator — beda dari perilaku data mock sebelumnya.
+  const antrean = rumahTangga.data.filter((r) => r.statusVerifikasi === "pending");
 
   return (
-    <main className="overflow-x-hidden pb-24 pt-20 sm:pb-32">
-      <AdminSubnav />
+    <main className="overflow-x-hidden pb-16 pt-8">
+      <div className="mx-auto max-w-[78rem] px-4 sm:px-4">
+        <PageHeader
+          eyebrow="Portal Admin"
+          title="Antrian Verifikasi"
+          description={`${angka(antrean.length)} berkas masih menunggu keputusan approve/reject.`}
+        />
+      </div>
 
-      <AdminHero
-        eyebrow="Portal Admin · Antrian Verifikasi"
-        title={
-          <>
-            Algoritma mengusulkan,
-            <br />
-            manusia memutuskan.
-          </>
-        }
-        body={
-          <>
-            Data yang tidak lolos di meja ini tidak akan pernah masuk clustering dan ranking. Setiap
-            penolakan butuh alasan tertulis, dan setiap approval menjadi bagian dari jejak audit.
-            Per 20 Agustus 2026, ada {angka(antrean.length)} berkas yang masih perlu keputusan.
-          </>
-        }
-        aside={<AdminAsideSummary />}
-      />
-
-      <section className="px-4 pb-20 sm:px-8 sm:pb-28">
+      <section className="px-4 pt-8 pb-16 sm:px-8">
         <div className="mx-auto max-w-[78rem]">
-          <AdminStatsGrid />
+          <AdminStatsGrid
+            totalRumahTangga={summary.total_rumah_tangga}
+            dataTerverifikasi={summary.total_verified}
+            clusterPrioritas={summary.total_terpilih}
+            totalAlokasi={periode.totalAlokasi ?? 0}
+            sisaAnggaran={periode.sisaAnggaran ?? 0}
+            kuotaPenerima={periode.kuotaPenerima ?? 0}
+            jumlahKlaim={summary.total_claimed}
+          />
         </div>
       </section>
 

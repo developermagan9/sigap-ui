@@ -1,21 +1,21 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bezel } from "@/components/ui/Bezel";
 import { Button } from "@/components/ui/Button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Field, inputCls, inputErrCls } from "./Field";
-import { Alert, Check, Cross, Info, Users } from "@/components/ui/Icons";
-import { WILAYAH } from "@/lib/mock/generate";
+import { Alert, Check, Cross, Users } from "@/components/ui/Icons";
+import { createRumahTangga } from "@/lib/actions";
+import { PERIODE_AKTIF_ID } from "@/lib/constants";
+import type { WilayahRow } from "@/lib/api";
 import { rupiah } from "@/lib/format";
-
-/** NIK/No.KK yang sengaja disiapkan untuk mendemokan tiap jalur penolakan. */
-const BENTROK_NIK = "9911223344556677";
-const BENTROK_KK = "9988776655443322";
-const BENTROK_ANGGOTA = "9955443322110099";
 
 type Anggota = {
   id: number;
+  nama: string;
   nik: string;
   hubungan: "kepala" | "istri_suami" | "anak" | "orang_tua" | "famili_lain";
   lahir: string;
@@ -35,43 +35,43 @@ const umur = (lahir: string) => {
   if (!lahir) return null;
   const d = new Date(lahir);
   if (Number.isNaN(d.getTime())) return null;
-  return Math.floor((Date.parse("2026-08-20") - d.getTime()) / 31_557_600_000);
+  return Math.floor((Date.now() - d.getTime()) / 31_557_600_000);
 };
 
-export function FormPendataan() {
+export function FormPendataan({ wilayah }: { wilayah: WilayahRow[] }) {
+  const router = useRouter();
+  const [namaKepala, setNamaKepala] = useState("");
   const [nik, setNik] = useState("");
   const [noKk, setNoKk] = useState("");
-  const [desa, setDesa] = useState<string>(WILAYAH[0]);
+  const [alamat, setAlamat] = useState("");
+  const [wilayahId, setWilayahId] = useState(wilayah[0]?.id ?? "");
   const [pendapatan, setPendapatan] = useState("");
   const [rumah, setRumah] = useState(3);
   const [didik, setDidik] = useState(3);
   const [riwayat, setRiwayat] = useState(false);
   const [anggota, setAnggota] = useState<Anggota[]>([
-    { id: 1, nik: "", hubungan: "kepala", lahir: "", disabilitas: false, tanggungan: false },
+    { id: 1, nama: "", nik: "", hubungan: "kepala", lahir: "", disabilitas: false, tanggungan: false },
   ]);
-  const [kirim, setKirim] = useState<"idle" | "sukses">("idle");
+  const [konfirmasi, setKonfirmasi] = useState(false);
+  const [mengirim, setMengirim] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const galat = useMemo(() => {
     const g: Record<string, string> = {};
 
     if (nik && nik.length !== 16) g.nik = "NIK harus 16 digit.";
-    else if (nik === BENTROK_NIK)
-      g.nik = "409 DUPLICATE_NIK — NIK kepala keluarga ini sudah terdaftar pada periode berjalan (REC-0118). Data tidak disimpan.";
-
     if (noKk && noKk.length !== 16) g.noKk = "No. KK harus 16 digit.";
-    else if (noKk === BENTROK_KK)
-      g.noKk = "409 DUPLICATE_NO_KK — Kartu keluarga ini sudah terdaftar dengan kepala keluarga berbeda (REC-0204).";
 
     const kepala = anggota.filter((a) => a.hubungan === "kepala");
     if (kepala.length !== 1) g.anggota = "Harus ada tepat satu anggota berstatus kepala keluarga.";
     else if (nik && kepala[0].nik && kepala[0].nik !== nik)
       g.anggota = "NIK anggota berstatus kepala keluarga harus sama dengan NIK kepala keluarga di atas.";
+    else if (anggota.some((a) => !a.nama.trim()))
+      g.anggota = "Setiap anggota keluarga harus punya nama.";
 
     const nikAnggota = anggota.map((a) => a.nik).filter(Boolean);
     if (new Set(nikAnggota).size !== nikAnggota.length)
       g.anggota = "Ada NIK anggota yang tercatat dua kali di kartu keluarga ini.";
-    else if (nikAnggota.includes(BENTROK_ANGGOTA))
-      g.anggota = "409 DUPLICATE_NIK_ANGGOTA — Anggota ini sudah tercatat pada REC-0331. Indikasi pecah kartu keluarga.";
 
     if (pendapatan && +pendapatan < 0) g.pendapatan = "Pendapatan tidak boleh negatif.";
 
@@ -90,11 +90,51 @@ export function FormPendataan() {
     return { tanggungan, disabilitasLansia, jiwa, perKapita };
   }, [anggota, pendapatan]);
 
-  const lengkap = nik.length === 16 && noKk.length === 16 && !!pendapatan && anggota.every((a) => a.nik.length === 16 && a.lahir);
+  const lengkap =
+    namaKepala.trim().length > 0 &&
+    alamat.trim().length > 0 &&
+    nik.length === 16 &&
+    noKk.length === 16 &&
+    !!pendapatan &&
+    !!wilayahId &&
+    anggota.every((a) => a.nik.length === 16 && a.lahir && a.nama.trim());
   const bisaKirim = lengkap && Object.keys(galat).length === 0;
 
   const ubahAnggota = (id: number, patch: Partial<Anggota>) =>
     setAnggota((s) => s.map((a) => (a.id === id ? { ...a, ...patch } : a)));
+
+  const kirim = async () => {
+    setMengirim(true);
+    setSubmitError(null);
+    try {
+      await createRumahTangga({
+        nik_kepala_keluarga: nik,
+        no_kk: noKk,
+        nama_kepala_keluarga: namaKepala,
+        alamat_detail: alamat,
+        wilayah_id: wilayahId,
+        pendapatan_per_kapita: turunan.perKapita,
+        skor_kondisi_rumah: rumah,
+        skor_akses_pendidikan: didik,
+        riwayat_bansos_sebelumnya: riwayat,
+        periode_id: PERIODE_AKTIF_ID,
+        anggota: anggota.map((a) => ({
+          nik: a.nik,
+          nama: a.nama,
+          hubungan: a.hubungan,
+          tanggal_lahir: a.lahir,
+          status_disabilitas: a.disabilitas,
+          is_tanggungan: a.tanggungan,
+        })),
+      });
+      setKonfirmasi(false);
+      router.push("/petugas/riwayat");
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Gagal menyimpan data.");
+    } finally {
+      setMengirim(false);
+    }
+  };
 
   return (
     <section className="px-4 sm:px-8">
@@ -106,6 +146,15 @@ export function FormPendataan() {
               <Eyebrow>Data rumah tangga</Eyebrow>
 
               <div className="mt-7 grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <Field label="Nama kepala keluarga" wajib>
+                  <input
+                    value={namaKepala}
+                    onChange={(e) => setNamaKepala(e.target.value)}
+                    placeholder="Sesuai KTP"
+                    className={inputCls}
+                  />
+                </Field>
+
                 <Field label="NIK kepala keluarga" hint="16 digit" wajib error={galat.nik}>
                   <input
                     value={nik}
@@ -127,10 +176,23 @@ export function FormPendataan() {
                 </Field>
 
                 <Field label="Desa" wajib>
-                  <select value={desa} onChange={(e) => setDesa(e.target.value)} className={inputCls}>
-                    {WILAYAH.map((w) => <option key={w} value={w}>{w}</option>)}
+                  <select value={wilayahId} onChange={(e) => setWilayahId(e.target.value)} className={inputCls}>
+                    {wilayah.map((w) => (
+                      <option key={w.id} value={w.id}>{w.desa}</option>
+                    ))}
                   </select>
                 </Field>
+
+                <div className="sm:col-span-2">
+                  <Field label="Alamat" wajib>
+                    <input
+                      value={alamat}
+                      onChange={(e) => setAlamat(e.target.value)}
+                      placeholder="Jl. Contoh No. 1, RT/RW"
+                      className={inputCls}
+                    />
+                  </Field>
+                </div>
 
                 <Field label="Pendapatan rumah tangga" hint="per bulan" wajib error={galat.pendapatan}>
                   <input
@@ -173,7 +235,7 @@ export function FormPendataan() {
                     onClick={() =>
                       setAnggota((s) => [
                         ...s,
-                        { id: Math.max(0, ...s.map((a) => a.id)) + 1, nik: "", hubungan: "anak", lahir: "", disabilitas: false, tanggungan: true },
+                        { id: Math.max(0, ...s.map((a) => a.id)) + 1, nama: "", nik: "", hubungan: "anak", lahir: "", disabilitas: false, tanggungan: true },
                       ])
                     }
                     className="group flex items-center gap-2 rounded-full bg-ink/[0.05] px-4 py-2 text-[12px]
@@ -215,7 +277,15 @@ export function FormPendataan() {
                           )}
                         </div>
 
-                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <input
+                            value={a.nama}
+                            onChange={(e) => ubahAnggota(a.id, { nama: e.target.value })}
+                            placeholder="Nama anggota"
+                            className="rounded-xl bg-card px-3 py-2.5 text-[12px] ring-1
+                              ring-[var(--hairline)] outline-none transition-all duration-500
+                              ease-[cubic-bezier(0.32,0.72,0,1)] focus:ring-sage/40"
+                          />
                           <input
                             value={a.nik}
                             onChange={(e) => ubahAnggota(a.id, { nik: e.target.value.replace(/\D/g, "").slice(0, 16) })}
@@ -225,6 +295,8 @@ export function FormPendataan() {
                               ring-[var(--hairline)] outline-none transition-all duration-500
                               ease-[cubic-bezier(0.32,0.72,0,1)] focus:ring-sage/40"
                           />
+                        </div>
+                        <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                           <select
                             value={a.hubungan}
                             onChange={(e) => ubahAnggota(a.id, { hubungan: e.target.value as Anggota["hubungan"] })}
@@ -269,16 +341,11 @@ export function FormPendataan() {
               <div className="mt-9 flex flex-wrap items-center gap-4 border-t border-[var(--hairline)] pt-7">
                 <Button
                   disabled={!bisaKirim}
-                  onClick={() => setKirim("sukses")}
+                  onClick={() => setKonfirmasi(true)}
                   icon={<Check className="h-[15px] w-[15px]" />}
                 >
                   Simpan data rumah tangga
                 </Button>
-                {kirim === "sukses" && (
-                  <p className="text-[12px] text-sage">
-                    Tersimpan dengan status <span className="font-mono">pending</span> — menunggu verifikator.
-                  </p>
-                )}
                 {!bisaKirim && !Object.keys(galat).length && (
                   <p className="text-[12px] text-ink-4">Lengkapi seluruh kolom wajib untuk menyimpan.</p>
                 )}
@@ -316,48 +383,20 @@ export function FormPendataan() {
               </p>
             </div>
           </Bezel>
-
-          <Bezel>
-            <div className="p-7">
-              <div className="flex items-start justify-between gap-4">
-                <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-3">
-                  Uji penolakan
-                </p>
-                <span className="text-ink-4"><Info className="h-4 w-4" /></span>
-              </div>
-              <p className="mt-3 text-[12px] leading-relaxed text-ink-3">
-                Isi cepat dengan data yang sengaja bentrok untuk melihat tiap jalur deduplikasi
-                bekerja.
-              </p>
-              <div className="mt-5 flex flex-col gap-2.5">
-                {[
-                  { l: "NIK kepala keluarga ganda", act: () => setNik(BENTROK_NIK) },
-                  { l: "Nomor KK ganda", act: () => setNoKk(BENTROK_KK) },
-                  {
-                    l: "Anggota sudah ada di KK lain",
-                    act: () => setAnggota((s) => s.map((a, i) => (i === 0 ? { ...a, nik: BENTROK_ANGGOTA } : a))),
-                  },
-                ].map((b) => (
-                  <button
-                    key={b.l}
-                    onClick={b.act}
-                    className="group flex items-center justify-between gap-3 rounded-2xl bg-paper-2 px-4 py-3
-                      text-left text-[12px] ring-1 ring-[var(--hairline)] transition-all duration-500
-                      ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-clay-soft hover:ring-clay/20 active:scale-[0.99]"
-                  >
-                    {b.l}
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full
-                      bg-ink/[0.05] transition-transform duration-500 ease-[cubic-bezier(0.32,0.72,0,1)]
-                      group-hover:translate-x-0.5">
-                      <Alert className="h-3 w-3" />
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </Bezel>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={konfirmasi}
+        onClose={() => !mengirim && setKonfirmasi(false)}
+        onConfirm={kirim}
+        loading={mengirim}
+        title="Simpan data rumah tangga ini?"
+        description="Sistem akan mengecek duplikasi NIK kepala keluarga, No. KK, dan tiap anggota sebelum data disimpan."
+        confirmLabel="Ya, simpan"
+      >
+        {submitError && <p className="mt-3 text-[12px] leading-[1.6] text-[var(--color-alert)]">{submitError}</p>}
+      </ConfirmDialog>
     </section>
   );
 }

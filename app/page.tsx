@@ -1,11 +1,6 @@
-import { Button } from "@/components/ui/Button";
-import { ArrowRight, Search, Ledger } from "@/components/ui/Icons";
+import { Ledger } from "@/components/ui/Icons";
 import { PageHeader } from "@/components/ui/PageHeader";
-import {
-  DistributionList,
-  ExplorerLink,
-  TransactionsTable,
-} from "@/components/public/PublicShared";
+import { TransactionsTable } from "@/components/public/PublicShared";
 import { PROGRAM, dataset, ringkasanPublik as R } from "@/lib/mock/data";
 import { persen, rupiahRingkas } from "@/lib/format";
 
@@ -19,16 +14,6 @@ export default function HomeDashboard() {
           eyebrow="Dashboard Sistem"
           title={PROGRAM.nama}
           description={`Periode: ${PROGRAM.periode}`}
-          actions={
-            <>
-              <Button href="/cek-status" variant="ghost" icon={<Search className="w-4 h-4" />}>
-                Cek NIK
-              </Button>
-              <Button href="/login" icon={<ArrowRight className="w-4 h-4" />}>
-                Masuk Sistem
-              </Button>
-            </>
-          }
         />
       </div>
 
@@ -91,28 +76,14 @@ export default function HomeDashboard() {
         </div>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="rule-card p-0 overflow-hidden">
-          <div className="p-4 border-b border-[var(--color-line)] flex justify-between items-center bg-[var(--color-canvas)]">
-            <div className="flex items-center gap-2">
-              <Ledger className="w-4 h-4 text-[var(--color-ink-3)]" />
-              <h3 className="font-heading font-semibold text-base">Pencairan On-Chain Terbaru</h3>
-            </div>
-            <ExplorerLink />
-          </div>
-          <div className="p-0">
-            <TransactionsTable limit={5} />
-          </div>
+      {/* Pencairan On-Chain preview */}
+      <div className="rule-card p-0 overflow-hidden">
+        <div className="p-4 border-b border-[var(--color-line)] flex items-center gap-2 bg-[var(--color-canvas)]">
+          <Ledger className="w-4 h-4 text-[var(--color-ink-3)]" />
+          <h3 className="font-heading font-semibold text-base">Pencairan On-Chain Terbaru</h3>
         </div>
-
-        <div className="rule-card p-0 overflow-hidden">
-          <div className="p-4 border-b border-[var(--color-line)] bg-[var(--color-canvas)]">
-            <h3 className="font-heading font-semibold text-base">Distribusi Wilayah</h3>
-          </div>
-          <div className="p-5">
-            <DistributionList />
-          </div>
+        <div className="px-4 pb-4 sm:px-6 sm:pb-5">
+          <TransactionsTable limit={5} />
         </div>
       </div>
     </main>

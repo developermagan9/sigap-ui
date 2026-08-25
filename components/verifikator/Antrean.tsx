@@ -1,27 +1,51 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Bezel } from "@/components/ui/Bezel";
 import { Eyebrow } from "@/components/ui/Eyebrow";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Alert, Check, Cross, Filter, Search } from "@/components/ui/Icons";
 import { angka, rupiah } from "@/lib/format";
-import type { RumahTangga } from "@/lib/mock/generate";
+import type { RumahTanggaRow } from "@/lib/api";
+import { verifyRumahTangga } from "@/lib/actions";
 
 type Keputusan = "verified" | "rejected";
 
-export function Antrean({ baris }: { baris: RumahTangga[] }) {
+export function Antrean({ baris }: { baris: RumahTanggaRow[] }) {
+  const router = useRouter();
   const [q, setQ] = useState("");
   const [saring, setSaring] = useState<"semua" | "flagged">("semua");
   const [putusan, setPutusan] = useState<Record<string, Keputusan>>({});
   const [alasan, setAlasan] = useState<Record<string, string>>({});
   const [buka, setBuka] = useState<string | null>(null);
+  const [konfirmasi, setKonfirmasi] = useState<{ r: RumahTanggaRow; keputusan: Keputusan } | null>(null);
+  const [memproses, setMemproses] = useState(false);
+  const [galat, setGalat] = useState<string | null>(null);
+
+  const terapkanKeputusan = async () => {
+    if (!konfirmasi) return;
+    setMemproses(true);
+    setGalat(null);
+    try {
+      await verifyRumahTangga(konfirmasi.r.id, konfirmasi.keputusan, alasan[konfirmasi.r.id]);
+      setPutusan((s) => ({ ...s, [konfirmasi.r.id]: konfirmasi.keputusan }));
+      if (konfirmasi.keputusan === "rejected") setBuka(konfirmasi.r.id);
+      setKonfirmasi(null);
+      router.refresh();
+    } catch (err) {
+      setGalat(err instanceof Error ? err.message : "Gagal menyimpan keputusan.");
+    } finally {
+      setMemproses(false);
+    }
+  };
 
   const tersaring = useMemo(() => {
     const t = q.trim().toLowerCase();
     return baris.filter(
       (r) =>
         (saring === "semua" || r.flaggedDuplicate) &&
-        (!t || r.ref.toLowerCase().includes(t) || r.desa.toLowerCase().includes(t)),
+        (!t || r.id.toLowerCase().includes(t) || r.wilayah.desa.toLowerCase().includes(t)),
     );
   }, [baris, q, saring]);
 
@@ -89,8 +113,8 @@ export function Antrean({ baris }: { baris: RumahTangga[] }) {
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-3">
-                            <span className="font-mono text-[13px]">{r.ref}</span>
-                            <span className="text-[13px] text-ink-3">{r.desa}</span>
+                            <span className="font-mono text-[13px]">{r.id.slice(0, 8)}</span>
+                            <span className="text-[13px] text-ink-3">{r.wilayah.desa}</span>
                             {r.flaggedDuplicate && (
                               <span className="inline-flex items-center gap-1.5 rounded-full bg-gold/10 px-2.5 py-1
                                 text-[10px] uppercase tracking-[0.1em] text-gold ring-1 ring-gold/20">
@@ -120,20 +144,22 @@ export function Antrean({ baris }: { baris: RumahTangga[] }) {
                             {terbuka ? "Tutup" : "Rincian"}
                           </button>
                           <button
-                            onClick={() => setPutusan((s) => ({ ...s, [r.id]: "verified" }))}
+                            onClick={() => setKonfirmasi({ r, keputusan: "verified" })}
+                            disabled={!!putusan[r.id]}
                             aria-label="Setujui"
                             className="flex h-9 w-9 items-center justify-center rounded-full bg-sage-soft
                               text-sage ring-1 ring-sage/20 transition-all duration-500
-                              ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-105 active:scale-95"
+                              ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
                           >
                             <Check className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => { setPutusan((s) => ({ ...s, [r.id]: "rejected" })); setBuka(r.id); }}
+                            onClick={() => setKonfirmasi({ r, keputusan: "rejected" })}
+                            disabled={!!putusan[r.id]}
                             aria-label="Tolak"
                             className="flex h-9 w-9 items-center justify-center rounded-full bg-clay-soft
                               text-clay ring-1 ring-clay/20 transition-all duration-500
-                              ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-105 active:scale-95"
+                              ease-[cubic-bezier(0.32,0.72,0,1)] hover:scale-105 active:scale-95 disabled:opacity-50 disabled:pointer-events-none"
                           >
                             <Cross className="h-4 w-4" />
                           </button>
@@ -149,7 +175,7 @@ export function Antrean({ baris }: { baris: RumahTangga[] }) {
                             <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                               {[
                                 ["Hash NIK KK", `${r.nikKkHash.slice(0, 12)}···`],
-                                ["Hash No. KK", `${r.noKkHash.slice(0, 12)}···`],
+                                ["Kondisi rumah", `${r.skorKondisiRumah}/5`],
                                 ["Akses pendidikan", `${r.skorAksesPendidikan}/5`],
                                 ["Riwayat bansos", r.riwayatBansosSebelumnya ? "Pernah" : "Belum pernah"],
                               ].map(([k, v]) => (
@@ -198,6 +224,27 @@ export function Antrean({ baris }: { baris: RumahTangga[] }) {
           </div>
         </Bezel>
       </div>
+
+      <ConfirmDialog
+        open={!!konfirmasi}
+        onClose={() => !memproses && setKonfirmasi(null)}
+        onConfirm={terapkanKeputusan}
+        loading={memproses}
+        tone={konfirmasi?.keputusan === "rejected" ? "danger" : "primary"}
+        title={
+          konfirmasi?.keputusan === "rejected"
+            ? `Tolak berkas ${konfirmasi.r.id.slice(0, 8)}?`
+            : `Setujui berkas ${konfirmasi?.r.id.slice(0, 8)}?`
+        }
+        description={
+          konfirmasi?.keputusan === "rejected"
+            ? "Berkas yang ditolak tidak akan ikut clustering dan ranking. Keputusan ini tercatat di jejak audit."
+            : "Berkas ini akan lanjut ke tahap clustering dan ranking. Keputusan ini tercatat di jejak audit."
+        }
+        confirmLabel={konfirmasi?.keputusan === "rejected" ? "Ya, tolak" : "Ya, setujui"}
+      >
+        {galat && <p className="mt-3 text-[12px] leading-[1.6] text-clay">{galat}</p>}
+      </ConfirmDialog>
     </section>
   );
 }

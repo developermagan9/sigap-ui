@@ -1,84 +1,9 @@
-import type { ReactNode } from "react";
 import { Reveal } from "@/components/ui/Reveal";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Button } from "@/components/ui/Button";
 import { ArrowRight, Check, Doc, Ledger, Users } from "@/components/ui/Icons";
-import { dataset } from "@/lib/mock/data";
-import { KASUS_DUPLIKAT, WILAYAH } from "@/lib/mock/generate";
-import { angka, persen, rupiah } from "@/lib/format";
-
-export function PetugasSubnav() {
-  const items = [
-    { href: "/petugas/login", label: "Login" },
-    { href: "/petugas/tugas", label: "Daftar Tugas" },
-    { href: "/petugas/pendataan", label: "Form Input" },
-    { href: "/petugas/konfirmasi", label: "Konfirmasi" },
-    { href: "/petugas/riwayat", label: "Riwayat" },
-  ];
-
-  return (
-    <div className="mx-auto flex max-w-[78rem] flex-wrap gap-2 px-4 pt-8 sm:px-8">
-      {items.map((item) => (
-        <a
-          key={item.href}
-          href={item.href}
-          className="border border-[var(--color-line)] bg-white px-3 py-2 text-[12px] uppercase tracking-[0.14em] text-[var(--color-ink-3)] transition-colors hover:bg-[var(--color-paper-2)] hover:text-[var(--color-ink)]"
-        >
-          {item.label}
-        </a>
-      ))}
-    </div>
-  );
-}
-
-export function PetugasHero({
-  eyebrow,
-  title,
-  body,
-  aside,
-}: {
-  eyebrow: string;
-  title: ReactNode;
-  body: ReactNode;
-  aside?: ReactNode;
-}) {
-  return (
-    <section className="relative px-4 pb-10 pt-10 sm:px-8 sm:pt-14">
-      <div className="paper-grid pointer-events-none absolute inset-x-0 top-0 -z-10 h-[24rem]" />
-      <div className="mx-auto max-w-[78rem]">
-        <Reveal>
-          <div className="grid gap-6 border-b border-[var(--color-line)] pb-10 lg:grid-cols-[minmax(0,1.3fr)_22rem] lg:items-end">
-            <div className="max-w-4xl">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-ink-3)]">{eyebrow}</p>
-              <h1 className="mt-5 text-[3rem] sm:text-[4.25rem]">{title}</h1>
-              <div className="mt-6 max-w-2xl text-[15px] leading-7 text-[var(--color-ink-2)] sm:text-base">
-                {body}
-              </div>
-            </div>
-            {aside ? <div className="rule-card p-6">{aside}</div> : null}
-          </div>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
-export function PetugasAsideSummary() {
-  const pending = dataset.semua.filter((r) => r.statusVerifikasi === "pending").length;
-  const verified = dataset.semua.filter((r) => r.statusVerifikasi === "verified").length;
-
-  return (
-    <>
-      <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-ink-3)]">Status lapangan</p>
-      <dl className="mt-5 space-y-4 text-[13px]">
-        <SummaryRow label="Wilayah aktif" value={`${WILAYAH.length} desa`} />
-        <SummaryRow label="Menunggu verifikasi" value={angka(pending)} mono />
-        <SummaryRow label="Sudah lolos" value={angka(verified)} mono />
-        <SummaryRow label="Kasus duplikat contoh" value={angka(KASUS_DUPLIKAT.length)} mono />
-      </dl>
-    </>
-  );
-}
+import { angka, persen, rupiah, waktu } from "@/lib/format";
+import type { RumahTanggaRow } from "@/lib/api";
 
 export function SummaryRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
@@ -91,47 +16,45 @@ export function SummaryRow({ label, value, mono = false }: { label: string; valu
   );
 }
 
-export function PetugasTaskCards() {
-  const candidates = dataset.semua
-    .filter((r) => r.statusVerifikasi !== "rejected")
-    .slice(0, 6)
-    .map((r, index) => ({
-      ref: r.ref,
-      desa: r.desa,
-      note: index % 2 === 0 ? "Perlu foto dokumen rumah tangga" : "Lengkapi anggota keluarga dan pendapatan",
-      status: index < 2 ? "baru" : index < 4 ? "diproses" : "menunggu review",
-    }));
+export function PetugasTaskCards({ items }: { items: RumahTanggaRow[] }) {
+  const candidates = items.filter((r) => r.statusVerifikasi !== "rejected").slice(0, 6);
 
   return (
     <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-      {candidates.map((item, index) => (
-        <Reveal key={item.ref} delay={index * 70}>
-          <article className="rule-card h-full p-6">
-            <div className="flex items-center justify-between gap-4">
-              <Eyebrow tone={item.status === "baru" ? "gold" : item.status === "diproses" ? "ink" : "sage"}>
-                {item.status}
-              </Eyebrow>
-              <span className="font-mono text-[11px] text-[var(--color-ink-4)]">{item.ref}</span>
-            </div>
-            <h3 className="mt-6 text-[1.5rem]">{item.desa}</h3>
-            <p className="mt-3 text-[13px] leading-6 text-[var(--color-ink-3)]">{item.note}</p>
-            <div className="mt-6">
-              <Button href="/petugas/pendataan" icon={<ArrowRight className="h-4 w-4" />}>
-                Buka pendataan
-              </Button>
-            </div>
-          </article>
-        </Reveal>
-      ))}
+      {candidates.length === 0 && (
+        <p className="text-[13px] text-[var(--color-ink-3)]">Tidak ada tugas aktif untuk periode ini.</p>
+      )}
+      {candidates.map((item, index) => {
+        const status = item.flaggedDuplicate ? "ditandai" : item.statusVerifikasi === "pending" ? "menunggu review" : "diproses";
+        return (
+          <Reveal key={item.id} delay={index * 70}>
+            <article className="rule-card h-full p-6">
+              <div className="flex items-center justify-between gap-4">
+                <Eyebrow tone={status === "ditandai" ? "gold" : "ink"}>{status}</Eyebrow>
+                <span className="font-mono text-[11px] text-[var(--color-ink-4)]">{item.id.slice(0, 8)}</span>
+              </div>
+              <h3 className="mt-6 text-[1.5rem]">{item.wilayah.desa}</h3>
+              <p className="mt-3 text-[13px] leading-6 text-[var(--color-ink-3)]">
+                {item.flaggedDuplicate ? "Ditandai mirip data lain — perlu review manual." : "Menunggu keputusan verifikator."}
+              </p>
+              <div className="mt-6">
+                <Button href="/petugas/pendataan" icon={<ArrowRight className="h-4 w-4" />}>
+                  Buka pendataan
+                </Button>
+              </div>
+            </article>
+          </Reveal>
+        );
+      })}
     </div>
   );
 }
 
-export function PetugasStatsGrid() {
-  const pending = dataset.semua.filter((r) => r.statusVerifikasi === "pending").length;
-  const flagged = dataset.semua.filter((r) => r.flaggedDuplicate).length;
-  const verified = dataset.semua.filter((r) => r.statusVerifikasi === "verified").length;
-  const successRate = verified / Math.max(dataset.semua.length, 1);
+export function PetugasStatsGrid({ items }: { items: RumahTanggaRow[] }) {
+  const pending = items.filter((r) => r.statusVerifikasi === "pending").length;
+  const flagged = items.filter((r) => r.flaggedDuplicate).length;
+  const verified = items.filter((r) => r.statusVerifikasi === "verified").length;
+  const successRate = verified / Math.max(items.length, 1);
 
   const stats = [
     { label: "Entri menunggu review", value: angka(pending), body: "Masih perlu keputusan verifikator." },
@@ -183,24 +106,19 @@ export function PetugasQuickSteps() {
   );
 }
 
-export function RiwayatList() {
-  const entries = dataset.semua.slice(0, 8).map((r, index) => ({
-    ref: r.ref,
-    desa: r.desa,
-    status:
-      r.statusVerifikasi === "verified"
-        ? "verified"
-        : r.flaggedDuplicate
-          ? "flagged"
-          : r.statusVerifikasi,
-    amount: r.pendapatanPerKapita * (r.jumlahTanggungan + 1),
+export function RiwayatList({ items }: { items: RumahTanggaRow[] }) {
+  const entries = items.slice(0, 8).map((r) => ({
+    id: r.id,
+    desa: r.wilayah.desa,
+    status: r.statusVerifikasi === "verified" ? "verified" : r.flaggedDuplicate ? "flagged" : r.statusVerifikasi,
+    pendapatanPerKapita: r.pendapatanPerKapita,
     note:
       r.statusVerifikasi === "verified"
         ? "Lolos review lapangan."
         : r.flaggedDuplicate
           ? "Perlu pemeriksaan manual oleh verifikator."
           : "Menunggu keputusan verifikator.",
-    time: `20 Agt 2026 · ${String(8 + index).padStart(2, "0")}:15`,
+    time: r.createdAt,
   }));
 
   const tone = (status: string) =>
@@ -210,14 +128,18 @@ export function RiwayatList() {
         ? "bg-[#fbf3db] text-[#956400]"
         : "bg-[var(--color-paper-2)] text-[var(--color-ink-2)]";
 
+  if (entries.length === 0) {
+    return <p className="text-[13px] text-[var(--color-ink-3)]">Belum ada entri yang dikirim untuk periode ini.</p>;
+  }
+
   return (
     <div className="space-y-4">
       {entries.map((entry) => (
-        <article key={entry.ref} className="rule-card p-5">
+        <article key={entry.id} className="rule-card p-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <div className="flex items-center gap-3">
-                <span className="font-mono text-[12px]">{entry.ref}</span>
+                <span className="font-mono text-[12px]">{entry.id.slice(0, 8)}</span>
                 <span className={`rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] ${tone(entry.status)}`}>
                   {entry.status}
                 </span>
@@ -226,8 +148,8 @@ export function RiwayatList() {
               <p className="mt-1 text-[13px] leading-6 text-[var(--color-ink-3)]">{entry.note}</p>
             </div>
             <div className="sm:text-right">
-              <p className="font-mono text-[13px]">{rupiah(entry.amount)}</p>
-              <p className="mt-1 text-[12px] text-[var(--color-ink-4)]">{entry.time}</p>
+              <p className="font-mono text-[13px]">{rupiah(entry.pendapatanPerKapita)}/kapita</p>
+              <p className="mt-1 text-[12px] text-[var(--color-ink-4)]">{waktu(entry.time)}</p>
             </div>
           </div>
         </article>

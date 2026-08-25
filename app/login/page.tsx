@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "@/components/ui/Icons";
+import { LoadingButton } from "@/components/ui/LoadingButton";
+import { PERIODE_AKTIF_ID } from "@/lib/constants";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const router = useRouter();
@@ -31,7 +35,7 @@ export default function LoginPage() {
 
       // Redirect based on role
       if (role === "admin" || username === "ITSUP") {
-        router.push("/admin/periode/12");
+        router.push(`/admin/periode/${PERIODE_AKTIF_ID}`);
       } else if (role === "verifikator") {
         router.push("/admin/verifikasi");
       } else if (role === "petugas") {
@@ -39,87 +43,82 @@ export default function LoginPage() {
       } else {
         router.push("/");
       }
-      
+
       router.refresh();
     } catch (err: any) {
       setError(err.message);
-    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
-      <div className="w-full max-w-sm border border-[var(--color-line)] bg-white p-8 shadow-sm">
-        <div className="mb-8 text-center">
-          <span className="mb-4 mx-auto grid h-12 w-12 place-items-center border border-[var(--color-line)] bg-white text-[12px] font-semibold tracking-[0.15em] text-[var(--color-primary)]">
-            SGP
-          </span>
-          <h1 className="font-display text-2xl tracking-tight">Masuk ke SIGAP</h1>
-          <p className="mt-2 text-[13px] text-[var(--color-ink-3)]">
-            Sistem Informasi Penyaluran Bantuan Sosial
-          </p>
-        </div>
+    <div className="flex items-center justify-center px-4 py-12 sm:py-20">
+      <div className="w-full max-w-sm rounded-lg border border-[var(--color-line)] bg-white p-8 shadow-sm">
+        <h1 className="font-display text-[1.6rem] leading-tight tracking-[-0.02em] text-ink">
+          Masuk ke SIGAP
+        </h1>
+        <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
+          Sistem Informasi Penyaluran Bantuan Sosial.
+        </p>
 
         {error && (
-          <div className="mb-4 border border-red-200 bg-red-50 p-3 text-center text-[13px] text-red-600">
+          <div className="mt-5 rounded bg-clay-soft px-3.5 py-2.5 text-center text-[13px] text-clay ring-1 ring-clay/20">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="flex flex-col gap-5">
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-semibold uppercase tracking-wider text-[var(--color-ink-2)]">
+        <form onSubmit={handleLogin} className="mt-6 flex flex-col gap-4">
+          <label className="block">
+            <span className="text-[12px] font-medium uppercase tracking-[0.08em] text-ink-3">
               Username
-            </label>
+            </span>
             <input
               type="text"
               required
-              className="border border-[var(--color-line)] bg-[var(--color-bg)] px-3 py-2 text-[14px] outline-none focus:border-[var(--color-ink)]"
-              placeholder="admin / verifikator / petugas"
+              autoComplete="username"
+              autoFocus
+              className="mt-1.5 w-full rounded border border-[var(--color-line)] bg-paper-2 px-3 py-2
+                text-[14px] text-ink outline-none transition-colors focus:border-[var(--color-primary)]"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
-          </div>
+          </label>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[12px] font-semibold uppercase tracking-wider text-[var(--color-ink-2)]">
+          <label className="block">
+            <span className="text-[12px] font-medium uppercase tracking-[0.08em] text-ink-3">
               Kata Sandi
-            </label>
-            <input
-              type="password"
-              required
-              className="border border-[var(--color-line)] bg-[var(--color-bg)] px-3 py-2 text-[14px] outline-none focus:border-[var(--color-ink)]"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
+            </span>
+            <div className="relative mt-1.5">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                autoComplete="current-password"
+                className="w-full rounded border border-[var(--color-line)] bg-paper-2 px-3 py-2 pr-10
+                  text-[14px] text-ink outline-none transition-colors focus:border-[var(--color-primary)]"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
+                aria-pressed={showPassword}
+                className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-ink-3 hover:text-ink"
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </label>
 
-          <button
+          <LoadingButton
             type="submit"
-            disabled={loading}
-            className="mt-2 border border-[var(--color-ink)] bg-[var(--color-ink)] px-4 py-2.5 text-[13px] font-semibold tracking-wide text-white transition-colors hover:bg-black disabled:opacity-50"
+            loading={loading}
+            className="mt-2 w-full justify-center"
           >
             {loading ? "Memproses..." : "Masuk"}
-          </button>
+          </LoadingButton>
         </form>
-
-        <div className="mt-8 border-t border-[var(--color-line)] pt-6">
-          <p className="text-[11px] uppercase tracking-wider text-[var(--color-ink-4)] text-center">
-            Kredensial Demo
-          </p>
-          <div className="mt-4 flex flex-col gap-1 text-[12px] text-[var(--color-ink-3)]">
-            <p>Admin: <span className="font-semibold text-[var(--color-ink-2)]">admin</span></p>
-            <p>Verifikator: <span className="font-semibold text-[var(--color-ink-2)]">verifikator</span></p>
-            <p>Petugas: <span className="font-semibold text-[var(--color-ink-2)]">petugas</span></p>
-            <p className="mt-1 text-[11px]">(Sandi: password123)</p>
-            <div className="mt-3 pt-3 border-t border-[var(--color-line)] border-dashed">
-              <p>Superuser: <span className="font-semibold text-[var(--color-ink-2)]">ITSUP</span></p>
-              <p className="mt-1 text-[11px]">(Sandi: TuhanYesus1)</p>
-            </div>
-          </div>
-        </div>
       </div>
-    </main>
+    </div>
   );
 }

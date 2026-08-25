@@ -3,30 +3,24 @@
 import { ContributionBar } from "@/components/charts/ContributionBar";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Cross } from "@/components/ui/Icons";
-import { KRITERIA, type BarisRanking } from "@/lib/mock/data";
-import { angka, rupiah } from "@/lib/format";
-
-const tampilNilai = (key: string, v: number) => {
-  const k = KRITERIA.find((x) => x.key === key);
-  if (k?.unit === "rupiah") return rupiah(v);
-  if (k?.unit === "orang") return `${angka(v)} org`;
-  return `${v}/5`;
-};
+import { KRITERIA_LABEL } from "./AdminShared";
+import type { RankingRow } from "./RuangKerja";
+import { angka } from "@/lib/format";
 
 export function PanelPenjelasan({
   baris, terpilih, onTutup,
 }: {
-  baris: BarisRanking | null;
+  baris: RankingRow | null;
   terpilih: boolean;
   onTutup: () => void;
 }) {
   const items = baris
-    ? KRITERIA.filter((k) => baris.breakdown[k.key]).map((k) => ({
-        key: k.key,
-        label: k.label,
-        kontribusi: baris.breakdown[k.key].kontribusi,
-        kesenjangan: baris.breakdown[k.key].kesenjangan,
-        nilaiTampil: tampilNilai(k.key, baris.breakdown[k.key].nilaiAsli),
+    ? Object.entries(baris.breakdown_kriteria).map(([key, v]) => ({
+        key,
+        label: KRITERIA_LABEL[key] ?? key,
+        kontribusi: v.kontribusi,
+        kesenjangan: v.kesenjangan,
+        nilaiTampil: v.nilaiAsli.toFixed(2),
       }))
     : [];
 
@@ -55,7 +49,7 @@ export function PanelPenjelasan({
                       Peringkat {angka(baris.rank)}
                     </p>
                     <p className="mt-2 font-mono text-[12px] text-ink-3">
-                      {baris.peserta.ref} · {baris.peserta.desa}
+                      {baris.rumah_tangga_id.slice(0, 8)}
                     </p>
                   </div>
                   <button
@@ -71,9 +65,9 @@ export function PanelPenjelasan({
 
                 <div className="mt-7 grid grid-cols-3 gap-3">
                   {[
-                    ["Skor", baris.skor.toFixed(4)],
-                    ["D⁻", baris.dMinus.toFixed(4)],
-                    ["D⁺", baris.dPlus.toFixed(4)],
+                    ["Skor", baris.skor_topsis.toFixed(4)],
+                    ["D⁻", baris.d_minus?.toFixed(4) ?? "—"],
+                    ["D⁺", baris.d_plus?.toFixed(4) ?? "—"],
                   ].map(([k, v]) => (
                     <div key={k} className="rounded-2xl bg-paper-2 p-3.5 ring-1 ring-[var(--hairline)]">
                       <p className="text-[10px] uppercase tracking-[0.14em] text-ink-4">{k}</p>
@@ -119,9 +113,8 @@ export function PanelPenjelasan({
 
                 <div className="mt-6 flex flex-col divide-y divide-[var(--hairline)] text-[12px]">
                   {[
-                    ["Kelompok", baris.labelCluster],
-                    ["Hash NIK kepala keluarga", `${baris.nikKkHash.slice(0, 14)}···`],
-                    ["Jenis dompet", baris.peserta.jenisWallet === "custodial" ? "Custodial (didampingi)" : "Mandiri"],
+                    ["Kelompok", baris.cluster_label],
+                    ["Hash NIK kepala keluarga", `${baris.nik_kk_hash.slice(0, 14)}···`],
                   ].map(([k, v]) => (
                     <div key={k} className="flex items-center justify-between gap-3 py-2.5">
                       <span className="text-ink-3">{k}</span>

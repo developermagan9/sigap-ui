@@ -1,85 +1,17 @@
-import type { ReactNode } from "react";
 import { Reveal } from "@/components/ui/Reveal";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Check, Cube, Layers, Ledger, Scale, ShieldCheck, Users } from "@/components/ui/Icons";
-import { BOBOT_DEFAULT, dataset, KRITERIA, PROGRAM, ringkasanPublik } from "@/lib/mock/data";
 import { angka, persen, rupiah, rupiahRingkas } from "@/lib/format";
 
-export function AdminSubnav() {
-  const items = [
-    { href: "/admin/login", label: "Login" },
-    { href: `/admin/periode/${PROGRAM.id}`, label: "Dashboard" },
-    { href: "/admin/verifikasi", label: "Verifikasi" },
-    { href: "/admin/clustering", label: "Clustering" },
-    { href: "/admin/clustering/hasil", label: "Hasil Cluster" },
-    { href: "/admin/bobot", label: "Bobot" },
-    { href: "/admin/ranking", label: "Ranking" },
-    { href: "/admin/approval", label: "Approval" },
-    { href: "/admin/on-chain", label: "On-Chain" },
-    { href: "/admin/audit-log", label: "Audit Log" },
-  ];
-
-  return (
-    <div className="mx-auto flex max-w-[78rem] flex-wrap gap-2 px-4 pt-8 sm:px-8">
-      {items.map((item) => (
-        <a
-          key={item.href}
-          href={item.href}
-          className="border border-[var(--color-line)] bg-white px-3 py-2 text-[12px] uppercase tracking-[0.14em] text-[var(--color-ink-3)] transition-colors hover:bg-[var(--color-paper-2)] hover:text-[var(--color-ink)]"
-        >
-          {item.label}
-        </a>
-      ))}
-    </div>
-  );
-}
-
-export function AdminHero({
-  eyebrow,
-  title,
-  body,
-  aside,
-}: {
-  eyebrow: string;
-  title: ReactNode;
-  body: ReactNode;
-  aside?: ReactNode;
-}) {
-  return (
-    <section className="relative px-4 pb-10 pt-10 sm:px-8 sm:pt-14">
-      <div className="paper-grid pointer-events-none absolute inset-x-0 top-0 -z-10 h-[24rem]" />
-      <div className="mx-auto max-w-[78rem]">
-        <Reveal>
-          <div className="grid gap-6 border-b border-[var(--color-line)] pb-10 lg:grid-cols-[minmax(0,1.3fr)_22rem] lg:items-end">
-            <div className="max-w-4xl">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-ink-3)]">{eyebrow}</p>
-              <h1 className="mt-5 text-[3rem] sm:text-[4.25rem]">{title}</h1>
-              <div className="mt-6 max-w-2xl text-[15px] leading-7 text-[var(--color-ink-2)] sm:text-base">
-                {body}
-              </div>
-            </div>
-            {aside ? <div className="rule-card p-6">{aside}</div> : null}
-          </div>
-        </Reveal>
-      </div>
-    </section>
-  );
-}
-
-export function AdminAsideSummary() {
-  return (
-    <>
-      <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-ink-3)]">Ringkasan periode</p>
-      <dl className="mt-5 space-y-4 text-[13px]">
-        <SummaryRow label="Program" value={PROGRAM.nama} />
-        <SummaryRow label="Periode" value={PROGRAM.periode} />
-        <SummaryRow label="Pagu" value={rupiahRingkas(PROGRAM.anggaranTotal)} mono />
-        <SummaryRow label="Kuota final" value={angka(dataset.alokasi.kuotaPenerima)} mono />
-      </dl>
-    </>
-  );
-}
+/** Label kriteria TOPSIS — cocok dengan `KRITERIA_DEFAULT` di sigap-api/src/mining/mining.service.ts.
+ *  Backend cuma menyimpan `bobot_kriteria` sebagai angka mentah tanpa label manusia. */
+export const KRITERIA_LABEL: Record<string, string> = {
+  pendapatanPerKapita: "Pendapatan per kapita",
+  jumlahTanggungan: "Jumlah tanggungan",
+  jumlahDisabilitasLansia: "Disabilitas / lansia",
+  skorKondisiRumah: "Kondisi rumah",
+};
 
 export function SummaryRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
@@ -92,34 +24,46 @@ export function SummaryRow({ label, value, mono = false }: { label: string; valu
   );
 }
 
-export function AdminStatsGrid() {
-  const verified = dataset.peserta.length;
-  const tercairkan = dataset.pencairan.filter((p) => p.status === "claimed").length;
-  const prioritasUtama = dataset.clusters.slice(0, 2).reduce((sum, c) => sum + c.jumlahAnggota, 0);
-
+export function AdminStatsGrid({
+  totalRumahTangga,
+  dataTerverifikasi,
+  clusterPrioritas,
+  totalAlokasi,
+  sisaAnggaran,
+  kuotaPenerima,
+  jumlahKlaim,
+}: {
+  totalRumahTangga: number;
+  dataTerverifikasi: number;
+  clusterPrioritas: number;
+  totalAlokasi: number;
+  sisaAnggaran: number;
+  kuotaPenerima: number;
+  jumlahKlaim: number;
+}) {
   const items = [
     {
       label: "Data terverifikasi",
-      value: angka(verified),
-      sub: `${angka(dataset.semua.length - verified)} rumah tangga masih tertahan atau ditolak`,
+      value: angka(dataTerverifikasi),
+      sub: `${angka(Math.max(totalRumahTangga - dataTerverifikasi, 0))} rumah tangga masih tertahan atau ditolak`,
       icon: <Users className="h-[18px] w-[18px]" />,
     },
     {
       label: "Cluster prioritas",
-      value: angka(prioritasUtama),
+      value: angka(clusterPrioritas),
       sub: "dua kelompok paling rentan masuk antrean ranking",
       icon: <Layers className="h-[18px] w-[18px]" />,
     },
     {
       label: "Dana siap disalurkan",
-      value: rupiahRingkas(dataset.alokasi.totalAlokasi),
-      sub: `${rupiah(dataset.alokasi.sisaAnggaran)} tersisa sebagai carry-over`,
+      value: rupiahRingkas(totalAlokasi),
+      sub: `${rupiah(sisaAnggaran)} tersisa sebagai carry-over`,
       icon: <Scale className="h-[18px] w-[18px]" />,
     },
     {
       label: "Sudah diklaim",
-      value: persen(tercairkan / dataset.alokasi.kuotaPenerima),
-      sub: `${angka(tercairkan)} dari ${angka(dataset.alokasi.kuotaPenerima)} penerima telah menarik dananya`,
+      value: kuotaPenerima > 0 ? persen(jumlahKlaim / kuotaPenerima) : "—",
+      sub: `${angka(jumlahKlaim)} dari ${angka(kuotaPenerima)} penerima telah menarik dananya`,
       icon: <ShieldCheck className="h-[18px] w-[18px]" />,
     },
   ];
@@ -167,11 +111,18 @@ export function WorkflowCards() {
   );
 }
 
-export function ClusterSummaryCards() {
+type ClusterRingkas = {
+  clusterIndex: number;
+  label: string;
+  jumlahAnggota: number;
+  centroid: Record<string, number>;
+};
+
+export function ClusterSummaryCards({ clusters }: { clusters: ClusterRingkas[] }) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-4">
-      {dataset.clusters.map((cluster, index) => (
-        <Reveal key={cluster.index} delay={index * 70}>
+      {clusters.map((cluster, index) => (
+        <Reveal key={cluster.clusterIndex} delay={index * 70}>
           <article className="rule-card h-full p-6">
             <Eyebrow className="max-w-max" tone={index < 2 ? "clay" : "ink"}>
               {cluster.label}
@@ -187,10 +138,6 @@ export function ClusterSummaryCards() {
                 <dt className="text-[var(--color-ink-3)]">Tanggungan rata-rata</dt>
                 <dd className="tnum text-[var(--color-ink-2)]">{cluster.centroid.jumlahTanggungan.toFixed(2)}</dd>
               </div>
-              <div className="flex items-center justify-between gap-3">
-                <dt className="text-[var(--color-ink-3)]">Kecocokan segmen</dt>
-                <dd className="tnum text-[var(--color-ink-2)]">{persen(cluster.kecocokanSegmen, 1)}</dd>
-              </div>
             </dl>
           </article>
         </Reveal>
@@ -199,49 +146,65 @@ export function ClusterSummaryCards() {
   );
 }
 
-export function BobotList() {
+export function BobotList({ bobot }: { bobot: Record<string, number> }) {
   return (
     <ul className="flex flex-col gap-3">
-      {KRITERIA.map((k) => (
+      {Object.entries(bobot).map(([key, value]) => (
         <li
-          key={k.key}
+          key={key}
           className="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-line)] bg-white p-4"
         >
-          <span className="text-[13px] text-[var(--color-ink-2)]">{k.label}</span>
-          <span className="font-mono text-[12px]">{persen(BOBOT_DEFAULT[k.key], 0)}</span>
+          <span className="text-[13px] text-[var(--color-ink-2)]">{KRITERIA_LABEL[key] ?? key}</span>
+          <span className="font-mono text-[12px]">{persen(value, 0)}</span>
         </li>
       ))}
     </ul>
   );
 }
 
+/** Lima invarian yang diperiksa server saat `build-merkle` dijalankan (lihat
+ *  merkle.service.ts checkInvariants()). Tidak ada endpoint pratinjau — status
+ *  lolos/gagal sungguhan baru diketahui saat build-merkle benar-benar dipanggil
+ *  di halaman On-chain, jadi daftar ini bersifat informasi, bukan status hidup. */
 export function ApprovalChecklist() {
-  const invarian = dataset.invarian;
+  const items = [
+    "Total nominal alokasi sama dengan jumlah amount tiap penerima",
+    "Total alokasi tidak melebihi anggaran efektif",
+    "Jumlah leaf Merkle sama dengan kuota penerima",
+    "Setiap alamat wallet valid dan unik",
+    "Setiap nominal amount lebih besar dari nol",
+  ];
   return (
     <ul className="flex flex-col gap-3">
-      {invarian.map((item) => (
-        <li key={item.nama} className="flex items-center justify-between gap-4 rounded-xl border border-[var(--color-line)] bg-white p-4">
-          <span className="flex items-center gap-3 text-[13px]">
-            <span className={`flex h-7 w-7 items-center justify-center rounded-full ${item.lolos ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]" : "bg-[var(--color-clay-soft)] text-[var(--color-clay)]"}`}>
-              {item.lolos ? <Check className="h-3.5 w-3.5" /> : <Cube className="h-3.5 w-3.5" />}
-            </span>
-            {item.nama}
+      {items.map((nama) => (
+        <li key={nama} className="flex items-center gap-3 rounded-xl border border-[var(--color-line)] bg-white p-4">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-paper-2)] text-[var(--color-ink-3)]">
+            <Check className="h-3.5 w-3.5" />
           </span>
-          <span className="font-mono text-[11px] text-[var(--color-ink-3)]">{item.detail}</span>
+          <span className="text-[13px] text-[var(--color-ink-2)]">{nama}</span>
         </li>
       ))}
     </ul>
   );
 }
 
-export function OnChainSummary() {
-  const claimed = dataset.pencairan.filter((p) => p.status === "claimed").length;
+export function OnChainSummary({
+  totalRecipients,
+  totalClaimed,
+  totalPending,
+  nominalDasar,
+}: {
+  totalRecipients: number;
+  totalClaimed: number;
+  totalPending: number;
+  nominalDasar: number;
+}) {
   return (
     <div className="grid gap-5 md:grid-cols-3">
       {[
-        { label: "Transaksi berhasil", value: angka(claimed), sub: `${angka(dataset.pencairan.length - claimed)} penerima masih menunggu klaim`, icon: <Ledger className="h-[18px] w-[18px]" /> },
-        { label: "Nominal per keluarga", value: rupiahRingkas(PROGRAM.nominalDasar), sub: "skema flat menghindari kebocoran peringkat kemiskinan di ledger", icon: <Scale className="h-[18px] w-[18px]" /> },
-        { label: "Dana sudah tersalur", value: rupiahRingkas(ringkasanPublik.totalTersalur), sub: `${rupiahRingkas(ringkasanPublik.totalAlokasi - ringkasanPublik.totalTersalur)} masih terkunci`, icon: <Cube className="h-[18px] w-[18px]" /> },
+        { label: "Transaksi berhasil", value: angka(totalClaimed), sub: `${angka(totalPending)} penerima masih menunggu klaim`, icon: <Ledger className="h-[18px] w-[18px]" /> },
+        { label: "Nominal per keluarga", value: rupiahRingkas(nominalDasar), sub: "skema flat menghindari kebocoran peringkat kemiskinan di ledger", icon: <Scale className="h-[18px] w-[18px]" /> },
+        { label: "Dana sudah tersalur", value: rupiahRingkas(nominalDasar * totalClaimed), sub: `dari ${angka(totalRecipients)} penerima terdaftar`, icon: <Cube className="h-[18px] w-[18px]" /> },
       ].map((item) => (
         <article key={item.label} className="rule-card p-5">
           <div className="flex items-start justify-between gap-4">

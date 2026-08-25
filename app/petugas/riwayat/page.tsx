@@ -1,32 +1,27 @@
+import { cookies } from "next/headers";
 import { Reveal } from "@/components/ui/Reveal";
-import { PetugasAsideSummary, PetugasHero, PetugasStatsGrid, PetugasSubnav, RiwayatList } from "@/components/petugas/PetugasShared";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { PetugasStatsGrid, RiwayatList } from "@/components/petugas/PetugasShared";
+import { ApiClient } from "@/lib/api";
+import { PERIODE_AKTIF_ID } from "@/lib/constants";
 
-export default function HalamanRiwayatPetugas() {
+export default async function HalamanRiwayatPetugas() {
+  const token = (await cookies()).get("sigap_token")?.value;
+  const { data } = await ApiClient.rumahTangga.getAll({ periode_id: PERIODE_AKTIF_ID, limit: 100 }, token);
+
   return (
-    <main className="overflow-x-hidden pb-24 pt-20 sm:pb-32">
-      <PetugasSubnav />
+    <main className="overflow-x-hidden pb-16 pt-8">
+      <div className="mx-auto max-w-[78rem] px-4 sm:px-4">
+        <PageHeader
+          eyebrow="Portal Petugas"
+          title="Riwayat Input"
+          description="Status tiap entri: pending, lolos, atau ditandai duplikat/dokumen kurang."
+        />
+      </div>
 
-      <PetugasHero
-        eyebrow="Portal Petugas · Riwayat Input"
-        title={
-          <>
-            Pantau hasil input
-            <br />
-            dari lapangan.
-          </>
-        }
-        body={
-          <>
-            Riwayat ini membantu petugas melihat mana entri yang masih `pending`, mana yang lolos,
-            dan mana yang perlu revisi karena ditandai potensi duplikat atau kekurangan dokumen.
-          </>
-        }
-        aside={<PetugasAsideSummary />}
-      />
-
-      <section className="px-4 pb-20 sm:px-8 sm:pb-28">
+      <section className="px-4 pt-8 pb-16 sm:px-8">
         <div className="mx-auto max-w-[78rem]">
-          <PetugasStatsGrid />
+          <PetugasStatsGrid items={data} />
         </div>
       </section>
 
@@ -40,7 +35,7 @@ export default function HalamanRiwayatPetugas() {
           </Reveal>
 
           <div className="mt-8">
-            <RiwayatList />
+            <RiwayatList items={data} />
           </div>
         </div>
       </section>

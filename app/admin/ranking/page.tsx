@@ -1,32 +1,36 @@
+import { cookies } from "next/headers";
 import { RuangKerja } from "@/components/admin/RuangKerja";
-import { AdminAsideSummary, AdminHero, AdminSubnav } from "@/components/admin/AdminShared";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { ApiClient } from "@/lib/api";
+import { PERIODE_AKTIF_ID } from "@/lib/constants";
 
-export default function HalamanRanking() {
+export default async function HalamanRanking() {
+  const token = (await cookies()).get("sigap_token")?.value;
+  const [periode, ranking] = await Promise.all([
+    ApiClient.periode.getById(PERIODE_AKTIF_ID, token),
+    ApiClient.mining.getRanking(PERIODE_AKTIF_ID, token),
+  ]);
+
   return (
-    <main className="overflow-x-hidden pb-24 pt-20 sm:pb-32">
-      <AdminSubnav />
-
-      <AdminHero
-        eyebrow="Portal Admin · Hasil Ranking Draft"
-        title={
-          <>
-            Ranking harus dibaca
-            <br />
-            sampai ke cutoff.
-          </>
-        }
-        body={
-          <>
-            Halaman ini fokus pada daftar ranking draft, perubahan urutan akibat simulasi, dan panel
-            explainability untuk tiap rumah tangga anonim. Tujuan utamanya bukan hanya melihat siapa
-            peringkat atas, tetapi juga siapa yang tepat berada di batas kuota.
-          </>
-        }
-        aside={<AdminAsideSummary />}
-      />
+    <main className="overflow-x-hidden pb-16 pt-8">
+      <div className="mx-auto max-w-[78rem] px-4 sm:px-4">
+        <PageHeader
+          eyebrow="Portal Admin"
+          title="Hasil Ranking Draft"
+          description="Daftar ranking, perubahan urutan akibat simulasi, dan posisi tiap rumah tangga terhadap cutoff kuota."
+        />
+      </div>
 
       <section className="py-5">
-        <RuangKerja />
+        <RuangKerja
+          periodeId={PERIODE_AKTIF_ID}
+          initialBobot={periode.bobotKriteria}
+          initialRanking={ranking.results as any}
+          clusterIndexTarget={periode.clusterPrioritas}
+          nominalDasar={periode.nominalDasar}
+          biayaOperasional={periode.biayaOperasional}
+          terkunci={periode.status === "approved" || periode.status === "disbursed"}
+        />
       </section>
     </main>
   );
