@@ -108,7 +108,7 @@ export function periksaInvarian<T extends KandidatAlokasi>(
       detail: `sisa ${hasil.sisaAnggaran.toLocaleString("id-ID")}`,
     },
     {
-      nama: "Jumlah leaf = kuota penerima",
+      nama: "Jumlah leaf = jumlah penerima",
       lolos: leaves.length === hasil.kuotaPenerima,
       detail: `${leaves.length} leaf`,
     },

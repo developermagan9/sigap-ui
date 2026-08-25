@@ -170,7 +170,7 @@ export function ApprovalChecklist() {
   const items = [
     "Total nominal alokasi sama dengan jumlah amount tiap penerima",
     "Total alokasi tidak melebihi anggaran efektif",
-    "Jumlah leaf Merkle sama dengan kuota penerima",
+    "Jumlah leaf Merkle sama dengan jumlah penerima",
     "Setiap alamat wallet valid dan unik",
     "Setiap nominal amount lebih besar dari nol",
   ];

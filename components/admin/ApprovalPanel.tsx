@@ -43,7 +43,7 @@ export function ApprovalPanel({
     <>
       <dl className="mt-4 space-y-4 text-[13px]">
         <div className="flex items-center justify-between gap-3">
-          <dt className="text-[var(--color-ink-3)]">Kuota penerima</dt>
+          <dt className="text-[var(--color-ink-3)]">Jumlah penerima</dt>
           <dd className="font-mono">{angka(kuotaPenerima)}</dd>
         </div>
         <div className="flex items-center justify-between gap-3">

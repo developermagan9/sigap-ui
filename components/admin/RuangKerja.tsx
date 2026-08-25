@@ -55,7 +55,7 @@ export function RuangKerja({
 }) {
   const router = useRouter();
   const dasar = useMemo(
-    () => Object.fromEntries(Object.entries(initialBobot).map(([k, v]) => [k, v * 100])),
+    () => Object.fromEntries(Object.entries(initialBobot).map(([k, v]) => [k, Math.round(v * 10000) / 100])),
     [initialBobot],
   );
 
@@ -69,6 +69,7 @@ export function RuangKerja({
   const [menyahkan, setMenyahkan] = useState(false);
   const [sahError, setSahError] = useState<string | null>(null);
   const [terkunci, setTerkunci] = useState(terkunciAwal);
+  const [halaman, setHalaman] = useState(1);
 
   const urutanAwal = useMemo(() => initialRanking.map((r) => r.rumah_tangga_id), [initialRanking]);
 
@@ -86,11 +87,14 @@ export function RuangKerja({
   );
 
   const kuota = alokasiMeta?.kuotaPenerima ?? ranking.filter((r) => r.terpilih).length;
-  const barisTampil = useMemo(() => {
-    const atas = ranking.slice(0, 8);
-    const batas = kuota > 8 ? ranking.slice(Math.max(kuota - 3, 8), kuota + 3) : [];
-    return { atas, batas };
-  }, [ranking, kuota]);
+
+  const PER_HALAMAN = 10;
+  const totalHalaman = Math.max(1, Math.ceil(ranking.length / PER_HALAMAN));
+  const halamanAktif = Math.min(halaman, totalHalaman);
+  const barisTampil = useMemo(
+    () => ranking.slice((halamanAktif - 1) * PER_HALAMAN, halamanAktif * PER_HALAMAN),
+    [ranking, halamanAktif],
+  );
 
   const jalankanRanking = async () => {
     setMenjalankan(true);
@@ -104,6 +108,7 @@ export function RuangKerja({
         biayaOperasional,
       );
       setRanking(hasil.ranking as RankingRow[]);
+      setHalaman(1);
       const a = hasil.alokasi as any;
       setAlokasiMeta({
         kuotaPenerima: a.kuota_penerima,
@@ -148,10 +153,10 @@ export function RuangKerja({
                   Bobot Kriteria
                 </h2>
                 <p className="mt-4 text-[13px] leading-[1.7] text-ink-2">
-                  Geser bobot, lalu jalankan ranking untuk lihat pengaruhnya pada daftar draft.
+                  Atur bobot tiap kriteria, lalu jalankan ranking untuk lihat pengaruhnya pada daftar draft.
                 </p>
 
-                <div className="mt-8 flex flex-col gap-6">
+                <div className="mt-8 flex flex-col gap-5">
                   {Object.keys(dasar).map((key) => {
                     const share = bobot[key] ?? 0;
                     const beda = share - (initialBobot[key] ?? 0);
@@ -170,18 +175,23 @@ export function RuangKerja({
                             )}
                           </span>
                         </div>
-                        <input
-                          id={key}
-                          type="range"
-                          min={0}
-                          max={60}
-                          step={0.5}
-                          disabled={terkunci}
-                          value={mentah[key] ?? 0}
-                          onChange={(e) => setMentah((s) => ({ ...s, [key]: +e.target.value }))}
-                          className="mt-3 h-1 w-full cursor-pointer appearance-none rounded-full bg-paper-3
-                            accent-[var(--color-sage)] disabled:cursor-not-allowed disabled:opacity-50"
-                        />
+                        <div className="relative mt-2">
+                          <input
+                            id={key}
+                            type="number"
+                            min={0}
+                            step={0.5}
+                            disabled={terkunci}
+                            value={mentah[key] ?? 0}
+                            onChange={(e) => setMentah((s) => ({ ...s, [key]: Math.max(0, +e.target.value) }))}
+                            className="tnum w-full rounded border border-[var(--color-line)] bg-paper-2 px-3 py-2 pr-9
+                              text-[14px] text-ink outline-none transition-colors focus:border-[var(--color-primary)]
+                              disabled:cursor-not-allowed disabled:opacity-50"
+                          />
+                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[13px] text-ink-3">
+                            %
+                          </span>
+                        </div>
                       </div>
                     );
                   })}
@@ -213,7 +223,7 @@ export function RuangKerja({
               <div className="lg:col-span-7">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   {[
-                    { l: "Kuota penerima", v: angka(kuota), s: `dari ${angka(ranking.length)} keluarga dalam cluster prioritas` },
+                    { l: "Jumlah penerima", v: angka(kuota), s: `dari ${angka(ranking.length)} keluarga dalam cluster prioritas` },
                     { l: "Total dialokasikan", v: alokasiMeta ? rupiahRingkas(alokasiMeta.totalAlokasi) : "—", s: alokasiMeta ? `sisa ${rupiah(alokasiMeta.sisaAnggaran)}` : "belum dijalankan" },
                     {
                       l: "Pergeseran dari resmi",
@@ -288,7 +298,9 @@ export function RuangKerja({
                   </h3>
                 </div>
                 <p className="text-[12px] text-ink-3">
-                  Menampilkan 8 teratas dan sekitar batas kuota
+                  {ranking.length > 0
+                    ? `Menampilkan ${angka((halamanAktif - 1) * PER_HALAMAN + 1)}–${angka(Math.min(halamanAktif * PER_HALAMAN, ranking.length))} dari ${angka(ranking.length)}`
+                    : "Belum ada data"}
                 </p>
               </div>
 
@@ -297,43 +309,28 @@ export function RuangKerja({
                   Belum ada ranking untuk periode ini — geser bobot lalu klik &ldquo;Jalankan ranking&rdquo;.
                 </p>
               ) : (
-                <div className="mt-7 overflow-x-auto">
-                  <table className="w-full min-w-[42rem] border-collapse text-left">
-                    <thead>
-                      <tr className="border-b border-[var(--hairline)]">
-                        {["#", "ID", "Kelompok", "Skor", "Status"].map((h) => (
-                          <th key={h} className="px-2 pb-3 text-[10px] font-medium uppercase tracking-[0.16em] text-ink-4">
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {barisTampil.atas.map((r) => (
-                        <BarisTabel key={r.rumah_tangga_id} r={r} onPilih={setPilih} />
-                      ))}
-
-                      {barisTampil.batas.length > 0 && (
-                        <>
-                          <tr>
-                            <td colSpan={5} className="py-4">
-                              <div className="flex items-center gap-4">
-                                <span className="h-px flex-1 bg-[var(--hairline)]" />
-                                <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-ink-4">
-                                  {angka(Math.max(kuota - 3, 8) - 8)} baris disembunyikan
-                                </span>
-                                <span className="h-px flex-1 bg-[var(--hairline)]" />
-                              </div>
-                            </td>
-                          </tr>
-                          {barisTampil.batas.map((r) => (
-                            <BarisTabel key={r.rumah_tangga_id} r={r} onPilih={setPilih} batas={r.rank === kuota} />
+                <>
+                  <div className="mt-7 overflow-x-auto">
+                    <table className="w-full min-w-[42rem] border-collapse text-left">
+                      <thead>
+                        <tr className="border-b border-[var(--hairline)]">
+                          {["#", "ID", "Kelompok", "Skor", "Status"].map((h) => (
+                            <th key={h} className="px-2 pb-3 text-[10px] font-medium uppercase tracking-[0.16em] text-ink-4">
+                              {h}
+                            </th>
                           ))}
-                        </>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {barisTampil.map((r) => (
+                          <BarisTabel key={r.rumah_tangga_id} r={r} onPilih={setPilih} batas={r.rank === kuota} />
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <Pagination halaman={halamanAktif} totalHalaman={totalHalaman} onGanti={setHalaman} />
+                </>
               )}
             </div>
           </Bezel>
@@ -393,6 +390,79 @@ export function RuangKerja({
       />
     </>
   );
+}
+
+function Pagination({
+  halaman, totalHalaman, onGanti,
+}: {
+  halaman: number;
+  totalHalaman: number;
+  onGanti: (h: number) => void;
+}) {
+  if (totalHalaman <= 1) return null;
+
+  const nomor = nomorHalaman(halaman, totalHalaman);
+
+  return (
+    <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-[var(--hairline)] pt-5">
+      <button
+        type="button"
+        onClick={() => onGanti(halaman - 1)}
+        disabled={halaman <= 1}
+        className="inline-flex items-center gap-1.5 text-[12px] font-medium text-ink-3 transition-colors
+          hover:text-ink disabled:pointer-events-none disabled:opacity-35"
+      >
+        <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+        Sebelumnya
+      </button>
+
+      <div className="flex items-center gap-1">
+        {nomor.map((n, i) =>
+          n === "…" ? (
+            <span key={`e${i}`} className="px-2 text-[12px] text-ink-4">
+              …
+            </span>
+          ) : (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onGanti(n)}
+              className={`tnum h-8 min-w-8 rounded-md px-2 text-[12px] transition-colors ${
+                n === halaman ? "bg-[var(--color-ink)] text-white" : "text-ink-3 hover:bg-paper-2 hover:text-ink"
+              }`}
+            >
+              {n}
+            </button>
+          ),
+        )}
+      </div>
+
+      <button
+        type="button"
+        onClick={() => onGanti(halaman + 1)}
+        disabled={halaman >= totalHalaman}
+        className="inline-flex items-center gap-1.5 text-[12px] font-medium text-ink-3 transition-colors
+          hover:text-ink disabled:pointer-events-none disabled:opacity-35"
+      >
+        Berikutnya
+        <ArrowRight className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+/** Jendela nomor halaman di sekitar halaman aktif + ujung awal/akhir, sisanya "…". */
+function nomorHalaman(halaman: number, total: number): (number | "…")[] {
+  const hasil: (number | "…")[] = [1];
+  const start = Math.max(2, halaman - 1);
+  const end = Math.min(total - 1, halaman + 1);
+
+  if (start > 2) hasil.push("…");
+  for (let i = start; i <= end; i++) hasil.push(i);
+  if (end < total - 1) hasil.push("…");
+  if (total > 1) hasil.push(total);
+
+  return hasil;
 }
 
 function BarisTabel({

@@ -329,7 +329,7 @@ export function ProgramStatsGrid() {
       </Reveal>
       <Reveal delay={80}>
         <InfoCard
-          label="Kuota penerima"
+          label="Jumlah penerima"
           value={angka(dataset.alokasi.kuotaPenerima)}
           body={`Dipilih dari ${angka(dataset.ranking.length)} keluarga rentan yang masuk tahap ranking.`}
         />

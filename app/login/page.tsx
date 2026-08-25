@@ -1,123 +1,147 @@
-"use client";
+import Link from "next/link";
+import type { Metadata } from "next";
+import { ArrowRight, Layers, Scale, Link as LinkIcon } from "@/components/ui/Icons";
+import { LoginForm } from "@/components/auth/LoginForm";
+import { PROGRAM, ringkasanPublik as R } from "@/lib/mock/data";
+import { angka, persen, rupiahRingkas } from "@/lib/format";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Eye, EyeOff } from "@/components/ui/Icons";
-import { LoadingButton } from "@/components/ui/LoadingButton";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
+export const metadata: Metadata = {
+  title: "Masuk — SIGAP-Bansos",
+};
+
+const PIPELINE = [
+  {
+    icon: Layers,
+    title: "Clustering K-Means",
+    desc: "Rumah tangga dikelompokkan menurut tingkat kerentanan sebelum diberi peringkat.",
+  },
+  {
+    icon: Scale,
+    title: "Ranking TOPSIS",
+    desc: "Peringkat penerima dihitung objektif dari beberapa kriteria kelayakan sekaligus.",
+  },
+  {
+    icon: LinkIcon,
+    title: "Audit on-chain",
+    desc: "Setiap pencairan dicatat sebagai Merkle root yang bisa diverifikasi publik.",
+  },
+];
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const router = useRouter();
+  const persenTersalur = R.totalAlokasi > 0 ? R.totalTersalur / R.totalAlokasi : 0;
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Gagal masuk");
-      }
-
-      const { role } = await res.json();
-
-      // Redirect based on role
-      if (role === "admin" || username === "ITSUP") {
-        router.push(`/admin/periode/${PERIODE_AKTIF_ID}`);
-      } else if (role === "verifikator") {
-        router.push("/admin/verifikasi");
-      } else if (role === "petugas") {
-        router.push("/petugas/tugas");
-      } else {
-        router.push("/");
-      }
-
-      router.refresh();
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false);
-    }
-  };
+  const STATS = [
+    { label: "Program aktif", value: PROGRAM.nama, hint: PROGRAM.periode },
+    { label: "Dana tersalur", value: rupiahRingkas(R.totalTersalur), hint: `${persen(persenTersalur)} dari alokasi` },
+    { label: "Penerima terverifikasi", value: angka(R.jumlahTerverifikasi), hint: PROGRAM.jaringan },
+  ];
 
   return (
-    <div className="flex items-center justify-center px-4 py-12 sm:py-20">
-      <div className="w-full max-w-sm rounded-lg border border-[var(--color-line)] bg-white p-8 shadow-sm">
-        <h1 className="font-display text-[1.6rem] leading-tight tracking-[-0.02em] text-ink">
-          Masuk ke SIGAP
-        </h1>
-        <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
-          Sistem Informasi Penyaluran Bantuan Sosial.
-        </p>
+    <div className="flex min-h-dvh flex-col lg:flex-row">
+      {/* Left — editorial brand panel */}
+      <div className="relative hidden overflow-hidden bg-[var(--color-ink)] px-10 py-10 text-[#F7F5EF] lg:flex lg:w-[46%] lg:flex-col lg:justify-between xl:w-[42%] xl:px-16 xl:py-14">
+        {/* Ambient texture */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(247,245,239,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(247,245,239,0.05) 1px, transparent 1px)",
+            backgroundSize: "64px 64px",
+            maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 75%)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full"
+          style={{ background: "radial-gradient(circle, rgba(201,138,44,0.16), transparent 70%)" }}
+        />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -bottom-32 -left-16 h-96 w-96 rounded-full"
+          style={{ background: "radial-gradient(circle, rgba(15,107,76,0.22), transparent 70%)" }}
+        />
 
-        {error && (
-          <div className="mt-5 rounded bg-clay-soft px-3.5 py-2.5 text-center text-[13px] text-clay ring-1 ring-clay/20">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="mt-6 flex flex-col gap-4">
-          <label className="block">
-            <span className="text-[12px] font-medium uppercase tracking-[0.08em] text-ink-3">
-              Username
+        <div className="fade-in-up relative z-10">
+          <Link href="/" className="inline-flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-md border border-white/15 bg-white/[0.06] text-[12px] font-bold text-[#e7c98a]">
+              SGP
             </span>
-            <input
-              type="text"
-              required
-              autoComplete="username"
-              autoFocus
-              className="mt-1.5 w-full rounded border border-[var(--color-line)] bg-paper-2 px-3 py-2
-                text-[14px] text-ink outline-none transition-colors focus:border-[var(--color-primary)]"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-[12px] font-medium uppercase tracking-[0.08em] text-ink-3">
-              Kata Sandi
-            </span>
-            <div className="relative mt-1.5">
-              <input
-                type={showPassword ? "text" : "password"}
-                required
-                autoComplete="current-password"
-                className="w-full rounded border border-[var(--color-line)] bg-paper-2 px-3 py-2 pr-10
-                  text-[14px] text-ink outline-none transition-colors focus:border-[var(--color-primary)]"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? "Sembunyikan kata sandi" : "Tampilkan kata sandi"}
-                aria-pressed={showPassword}
-                className="absolute inset-y-0 right-0 flex w-9 items-center justify-center text-ink-3 hover:text-ink"
-              >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+            <div>
+              <p className="font-display text-[15px] font-semibold tracking-wide">SIGAP Bansos</p>
+              <p className="text-[11px] uppercase tracking-widest text-[#F7F5EF]/55">Transparansi Distribusi</p>
             </div>
-          </label>
+          </Link>
+        </div>
 
-          <LoadingButton
-            type="submit"
-            loading={loading}
-            className="mt-2 w-full justify-center"
+        <div className="fade-in-up relative z-10 max-w-md" style={{ ["--delay" as string]: "80ms" }}>
+          <h1 className="font-display text-[2.1rem] leading-[1.08] tracking-[-0.02em] xl:text-[2.4rem]">
+            Bantuan sosial yang penyalurannya bisa ditelusuri, bukan sekadar dijanjikan.
+          </h1>
+          <p className="mt-4 text-[14px] leading-relaxed text-[#F7F5EF]/70">
+            Prioritas penerima dihitung objektif lewat K-Means dan TOPSIS, lalu setiap pencairan dana
+            dicatat on-chain agar bisa diaudit publik kapan saja.
+          </p>
+
+          <div className="mt-8 flex flex-col">
+            {PIPELINE.map((step, i) => (
+              <div
+                key={step.title}
+                className={`fade-in-up flex items-start gap-3.5 py-3.5 ${
+                  i > 0 ? "border-t border-white/10" : ""
+                }`}
+                style={{ ["--delay" as string]: `${160 + i * 80}ms` }}
+              >
+                <step.icon className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#e7c98a]" strokeWidth={1.6} />
+                <div>
+                  <p className="text-[13px] font-medium text-[#F7F5EF]">{step.title}</p>
+                  <p className="mt-0.5 text-[12.5px] leading-relaxed text-[#F7F5EF]/60">{step.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="fade-in-up relative z-10 mt-10" style={{ ["--delay" as string]: "420ms" }}>
+          <div className="flex items-stretch divide-x divide-white/10 border-t border-white/10 pt-5">
+            {STATS.map((s) => (
+              <div key={s.label} className="flex-1 px-4 first:pl-0 last:pr-0">
+                <p className="text-[10.5px] uppercase tracking-[0.1em] text-[#F7F5EF]/45">{s.label}</p>
+                <p className="tnum mt-1.5 truncate font-display text-[15px] tracking-[-0.01em]">{s.value}</p>
+                <p className="mt-0.5 text-[11px] text-[#F7F5EF]/50">{s.hint}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right — auth form */}
+      <div className="relative flex flex-1 flex-col px-6 py-8 sm:px-10 sm:py-10">
+        <div className="flex items-center justify-between lg:justify-end">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-3 transition-colors hover:text-ink lg:hidden"
           >
-            {loading ? "Memproses..." : "Masuk"}
-          </LoadingButton>
-        </form>
+            <span className="grid h-8 w-8 place-items-center rounded-md border border-[var(--color-line)] bg-white text-[10px] font-bold text-[var(--color-primary)]">
+              SGP
+            </span>
+          </Link>
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-3 transition-colors hover:text-ink"
+          >
+            <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+            Kembali ke beranda
+          </Link>
+        </div>
+
+        <div className="flex flex-1 items-center justify-center py-10">
+          <div className="w-full max-w-sm rounded-[12px] border border-[var(--color-line)] bg-[var(--color-card)] p-8 sm:p-9 lift-1">
+            <LoginForm />
+          </div>
+        </div>
+
+        <p className="pb-2 text-center text-[11px] text-ink-4">SIGAP-Bansos © 2026. Purwarupa Sistem Transparansi.</p>
       </div>
     </div>
   );

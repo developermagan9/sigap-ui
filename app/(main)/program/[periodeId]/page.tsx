@@ -93,7 +93,7 @@ export default async function HalamanDetailProgram({
               <div className="mt-8 border-t border-[var(--color-line)] pt-6">
                 <dl className="space-y-4 text-[13px]">
                   <MetaRow label="Rumah tangga diverifikasi" value={angka(R.jumlahTerverifikasi)} mono />
-                  <MetaRow label="Kuota penerima" value={angka(dataset.alokasi.kuotaPenerima)} mono />
+                  <MetaRow label="Jumlah penerima" value={angka(dataset.alokasi.kuotaPenerima)} mono />
                   <MetaRow label="Realisasi saat ini" value={persen(R.totalTersalur / R.totalAlokasi)} mono />
                   <MetaRow label="Dana telah tersalur" value={rupiahRingkas(R.totalTersalur)} mono />
                 </dl>

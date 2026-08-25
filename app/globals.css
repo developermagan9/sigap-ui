@@ -187,6 +187,24 @@
   transform: translateY(0);
 }
 
+/* Fade-in-on-mount, tanpa IntersectionObserver — untuk section yang sudah
+   berada dalam viewport sejak render pertama (mis. halaman satu layar penuh
+   seperti login), di mana .reveal tidak pernah "intersect" karena tidak
+   pernah discroll. */
+.fade-in-up {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: fade-in-up 600ms var(--ease-fluid) forwards;
+  animation-delay: var(--delay, 0ms);
+}
+
+@keyframes fade-in-up {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .reveal {
     opacity: 1;
