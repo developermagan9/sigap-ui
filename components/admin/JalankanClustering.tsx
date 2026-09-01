@@ -8,6 +8,15 @@ import { ArrowRight } from "@/components/ui/Icons";
 import { runClustering } from "@/lib/actions";
 import { angka } from "@/lib/format";
 
+/** Tafsir kasar silhouette untuk pembaca non-teknis. Ambangnya konvensi umum
+ *  (Kaufman & Rousseeuw), bukan aturan baku — karena itu kalimatnya berhati-hati. */
+function tafsirSilhouette(nilai: number): string {
+  if (nilai >= 0.7) return "cluster terpisah sangat jelas.";
+  if (nilai >= 0.5) return "pemisahan cluster tergolong wajar.";
+  if (nilai >= 0.25) return "struktur cluster lemah tapi masih terlihat.";
+  return "cluster banyak tumpang tindih pada data ini.";
+}
+
 export function JalankanClustering({
   periodeId,
   defaultK,
@@ -21,14 +30,24 @@ export function JalankanClustering({
   const [k, setK] = useState(defaultK);
   const [menjalankan, setMenjalankan] = useState(false);
   const [galat, setGalat] = useState<string | null>(null);
-  const [hasil, setHasil] = useState<{ sse: { k: number; sse: number }[]; iterations: number; kPakai: number } | null>(null);
+  const [hasil, setHasil] = useState<{
+    sse: { k: number; sse: number }[];
+    iterations: number;
+    kPakai: number;
+    silhouette: number | null;
+  } | null>(null);
 
   const jalankan = async () => {
     setMenjalankan(true);
     setGalat(null);
     try {
       const res = (await runClustering(periodeId, k)) as any;
-      setHasil({ sse: res.elbow, iterations: res.iterations, kPakai: res.k });
+      setHasil({
+        sse: res.elbow,
+        iterations: res.iterations,
+        kPakai: res.k,
+        silhouette: typeof res.silhouette_score === "number" ? res.silhouette_score : null,
+      });
       router.refresh();
     } catch (err) {
       setGalat(err instanceof Error ? err.message : "Gagal menjalankan clustering.");
@@ -66,9 +85,19 @@ export function JalankanClustering({
 
           {galat && <p className="mt-4 text-[12px] leading-6 text-[var(--color-alert)]">{galat}</p>}
           {hasil && (
-            <p className="mt-4 text-[12px] leading-6 text-[var(--color-primary)]">
-              Selesai — k={hasil.kPakai}, konvergen dalam {hasil.iterations} iterasi.
-            </p>
+            <div className="mt-4 space-y-2">
+              <p className="text-[12px] leading-6 text-[var(--color-primary)]">
+                Selesai — k={hasil.kPakai}, konvergen dalam {hasil.iterations} iterasi.
+              </p>
+              {hasil.silhouette !== null && (
+                <p className="text-[12px] leading-6 text-[var(--color-ink-3)]">
+                  Silhouette score{" "}
+                  <span className="font-mono text-[var(--color-ink)]">{hasil.silhouette.toFixed(3)}</span> —{" "}
+                  {tafsirSilhouette(hasil.silhouette)} Coba beberapa nilai k dan bandingkan angkanya
+                  sebelum memutuskan.
+                </p>
+              )}
+            </div>
           )}
         </section>
       </div>

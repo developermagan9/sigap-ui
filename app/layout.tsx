@@ -50,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="id"
+      data-scroll-behavior="smooth"
       className={`${fraunces.variable} ${jakarta.variable} ${mono.variable} ${poppins.variable} ${inter.variable}`}
     >
       <body className="grain min-h-dvh antialiased">{children}</body>

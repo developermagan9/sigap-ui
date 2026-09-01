@@ -1,9 +1,12 @@
 import { test, expect } from '@playwright/test';
 
-const PERIODE_AKTIF_ID = 'a1234567-89ab-4def-8123-456789abcdef';
+// Admin mendarat di dashboard periode yang sedang AKTIF, yang id-nya bergantung
+// pada isi database (pemilih periode, lihat lib/periode.ts) — jadi yang dicek
+// polanya, bukan satu UUID yang di-hardcode seperti sebelumnya.
+const POLA_DASHBOARD_ADMIN = /^\/admin\/periode\/[0-9a-f-]{36}$/;
 
 const CREDS = {
-  admin: { username: 'admin', password: 'password123', redirect: `/admin/periode/${PERIODE_AKTIF_ID}` },
+  admin: { username: 'admin', password: 'password123', redirect: POLA_DASHBOARD_ADMIN },
   verifikator: { username: 'verifikator', password: 'password123', redirect: '/admin/verifikasi' },
   petugas: { username: 'petugas', password: 'password123', redirect: '/petugas/tugas' },
 };
@@ -19,8 +22,14 @@ test.describe('Login', () => {
   for (const [role, cred] of Object.entries(CREDS)) {
     test(`${role} logs in and lands on the correct page`, async ({ page }) => {
       await login(page, cred.username, cred.password);
-      await page.waitForURL(`**${cred.redirect}`);
-      expect(new URL(page.url()).pathname).toBe(cred.redirect);
+      const tujuan = cred.redirect;
+      if (tujuan instanceof RegExp) {
+        await page.waitForURL((url) => tujuan.test(new URL(url).pathname));
+        expect(new URL(page.url()).pathname).toMatch(tujuan);
+      } else {
+        await page.waitForURL(`**${tujuan}`);
+        expect(new URL(page.url()).pathname).toBe(tujuan);
+      }
 
       const cookies = await page.context().cookies();
       expect(cookies.find((c) => c.name === 'sigap_role')?.value).toBe(
@@ -51,7 +60,7 @@ test.describe('Login', () => {
 
   test('logout clears session and re-locks protected routes', async ({ page }) => {
     await login(page, 'admin', 'password123');
-    await page.waitForURL(`**/admin/periode/${PERIODE_AKTIF_ID}`);
+    await page.waitForURL((url) => POLA_DASHBOARD_ADMIN.test(new URL(url).pathname));
 
     await page.goto('/api/auth/logout');
     await page.waitForURL('/');

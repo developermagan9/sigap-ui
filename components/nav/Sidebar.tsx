@@ -5,9 +5,8 @@ import { usePathname } from "next/navigation";
 import { ClientIcon } from "./ClientIcon";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { LogoutButton } from "./LogoutButton";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
 
-type Role = "admin" | "verifikator" | "petugas" | "public";
+type Role = "admin" | "verifikator" | "petugas" | "auditor" | "public";
 
 const MENU_ITEMS = {
   public: [
@@ -19,7 +18,9 @@ const MENU_ITEMS = {
     { href: "/login", label: "Masuk", icon: "ph:sign-in-duotone" },
   ],
   admin: [
-    { href: `/admin/periode/${PERIODE_AKTIF_ID}`, label: "Dashboard Program", icon: "ph:chart-bar-duotone" },
+    { href: "/admin/periode", label: "Dashboard Program", icon: "ph:chart-bar-duotone" },
+    { href: "/admin/periode/baru", label: "Periode Baru", icon: "ph:plus-circle-duotone" },
+    { href: "/admin/wilayah", label: "Wilayah Kerja", icon: "ph:map-pin-duotone" },
     { href: "/admin/verifikasi", label: "Verifikasi Data", icon: "ph:check-circle-duotone" },
     { href: "/admin/sanggahan", label: "Sanggahan Data", icon: "ph:chat-centered-text-duotone" },
     { href: "/admin/clustering", label: "Analisis Clustering", icon: "ph:intersect-duotone" },
@@ -34,6 +35,13 @@ const MENU_ITEMS = {
   verifikator: [
     { href: "/admin/verifikasi", label: "Verifikasi Data", icon: "ph:check-circle-duotone" },
     { href: "/admin/sanggahan", label: "Sanggahan Data", icon: "ph:chat-centered-text-duotone" },
+    { href: "/", label: "Portal Publik", icon: "ph:globe-hemisphere-west-duotone" },
+  ],
+  // Role `auditor` ada di enum & seed sejak awal tapi tidak pernah punya menu —
+  // praktis akun ini bisa login lalu terdampar. Sejak `GET /audit-log` mengizinkan
+  // `auditor`, role ini akhirnya punya satu halaman yang benar-benar bisa dibuka.
+  auditor: [
+    { href: "/admin/audit-log", label: "Audit Log", icon: "ph:clock-counter-clockwise-duotone" },
     { href: "/", label: "Portal Publik", icon: "ph:globe-hemisphere-west-duotone" },
   ],
   petugas: [

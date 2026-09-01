@@ -4,40 +4,32 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ClusterSummaryCards } from "@/components/admin/AdminShared";
 import { ClusterBubbleChart } from "@/components/charts/ClusterBubbleChart";
 import { ApiClient } from "@/lib/api";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
+import { getPeriodeAktifId } from "@/lib/periode";
 import { angka } from "@/lib/format";
-import { standardize, assignNearestCentroid } from "@/lib/algo/kmeans";
-
-const FITUR = ["pendapatanPerKapita", "jumlahTanggungan", "jumlahDisabilitasLansia", "skorKondisiRumah"] as const;
 
 export default async function HalamanHasilClustering() {
   const token = (await cookies()).get("sigap_token")?.value;
-  const periode = await ApiClient.periode.getById(PERIODE_AKTIF_ID, token);
+  const periodeId = await getPeriodeAktifId(token);
+  const periode = await ApiClient.periode.getById(periodeId, token);
   const clusters = (periode.clusterResults ?? []).slice().sort((a, b) => a.clusterIndex - b.clusterIndex);
   const totalAnggota = clusters.reduce((s, c) => s + c.jumlahAnggota, 0);
 
   const rumahTangga = await ApiClient.rumahTangga.getAll(
-    { periode_id: PERIODE_AKTIF_ID, status: "verified", limit: 1000 },
+    { periode_id: periodeId, status: "verified", limit: 1000 },
     token,
   );
 
-  // Assignment individual per rumah tangga tidak disimpan backend, jadi kita
-  // klasifikasikan tiap rumah tangga ke centroid resmi TERDEKAT (bukan
-  // menjalankan ulang K-Means — lihat catatan di lib/algo/kmeans.ts). Ini
-  // aproksimasi deterministik, bukan assignment asli hasil training.
-  const X = rumahTangga.data.map((h) => FITUR.map((k) => Number(h[k as keyof typeof h])));
-  let clusterOf: number[] = [];
-  if (X.length > 0 && clusters.length > 0) {
-    const { z, mean, std } = standardize(X);
-    const centroidsZ = clusters.map((c) => FITUR.map((k, j) => ((c.centroid[k] ?? 0) - mean[j]) / std[j]));
-    clusterOf = assignNearestCentroid(z, centroidsZ);
-  }
-
-  const households = rumahTangga.data.map((h, i) => ({
-    pendapatanPerKapita: h.pendapatanPerKapita,
-    jumlahTanggungan: h.jumlahTanggungan,
-    clusterIndex: clusterOf[i] ?? 0,
-  }));
+  // Assignment cluster per rumah tangga sekarang DISIMPAN backend saat
+  // `run-clustering` (kolom rumah_tangga.cluster_index), jadi titik di grafik
+  // diwarnai memakai assignment asli hasil training — bukan lagi aproksimasi
+  // "centroid terdekat" yang sempat meleset ~7% di batas antar-cluster.
+  const households = rumahTangga.data
+    .filter((h) => h.clusterIndex !== null)
+    .map((h) => ({
+      pendapatanPerKapita: h.pendapatanPerKapita,
+      jumlahTanggungan: h.jumlahTanggungan,
+      clusterIndex: h.clusterIndex as number,
+    }));
 
   return (
     <main className="overflow-x-hidden pb-16 pt-8">
@@ -92,15 +84,27 @@ export default async function HalamanHasilClustering() {
                   </div>
                   <p className="mt-6 text-[12px] leading-relaxed text-[var(--color-ink-3)]">
                     Titik per rumah tangga, diwarnai per cluster, bisa dilihat lewat mode &ldquo;Sebaran&rdquo;
-                    pada grafik di atas. Warnanya hasil klasifikasi ke centroid terdekat, bukan assignment
-                    asli — backend tidak menyimpan cluster per rumah tangga, cuma agregat per kelompok.
+                    pada grafik di atas. Warnanya memakai assignment asli yang disimpan saat clustering
+                    dijalankan, jadi cocok persis dengan jumlah anggota tiap kelompok di bawah.
                   </p>
                 </section>
               </Reveal>
 
               <Reveal className="lg:col-span-4" delay={80}>
                 <section className="rule-card p-6 sm:p-8">
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-ink-3)]">Interpretasi</p>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-ink-3)]">
+                    Kualitas pemisahan
+                  </p>
+                  <p className="mt-3 font-mono text-[2rem] leading-none text-[var(--color-accent)]">
+                    {periode.silhouetteScore === null ? "—" : periode.silhouetteScore.toFixed(3)}
+                  </p>
+                  <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-ink-3)]">
+                    Silhouette score untuk k = {periode.kCluster}. Rentang -1 sampai 1; makin tinggi berarti
+                    cluster makin terpisah jelas. Angka di sekitar 0 menandakan kelompok saling tumpang tindih —
+                    pertimbangkan k lain di halaman Analisis Clustering.
+                  </p>
+
+                  <p className="mt-8 text-[11px] uppercase tracking-[0.16em] text-[var(--color-ink-3)]">Interpretasi</p>
                   <ul className="mt-4 space-y-3 text-[13px] leading-6 text-[var(--color-ink-2)]">
                     <li>Kelompok paling rentan: pendapatan rendah, tanggungan besar.</li>
                     <li>Bukan pengganti verifikasi manual — alat pemisah populasi.</li>

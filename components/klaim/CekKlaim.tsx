@@ -5,37 +5,38 @@ import { Bezel } from "@/components/ui/Bezel";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Hash } from "@/components/ui/Hash";
-import { Alert, Check, Coins, Search, ShieldCheck } from "@/components/ui/Icons";
-import { PROGRAM } from "@/lib/mock/data";
+import { Alert, Check, Coins, Search } from "@/components/ui/Icons";
+import { EXPLORER_BASE } from "@/lib/constants";
 import { rupiah, waktu } from "@/lib/format";
-import { ApiClient } from "@/lib/api";
-
-type Tahap = "idle" | "menandatangani" | "selesai";
+import { ApiClient, type ClaimStatus } from "@/lib/api";
 
 export function CekKlaim() {
   const [q, setQ] = useState("");
   const [cari, setCari] = useState<string | null>(null);
-  const [hasil, setHasil] = useState<any>(null);
+  const [hasil, setHasil] = useState<ClaimStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorNotFound, setErrorNotFound] = useState(false);
-  const [tahap, setTahap] = useState<Tahap>("idle");
+  const [errorLain, setErrorLain] = useState<string | null>(null);
 
-  const jalankan = async (v: string) => { 
-    setQ(v); 
-    setCari(v); 
-    setTahap("idle"); 
+  const jalankan = async (v: string) => {
+    setQ(v);
+    setCari(v);
     setLoading(true);
     setErrorNotFound(false);
+    setErrorLain(null);
     setHasil(null);
 
     try {
       const res = await ApiClient.public.checkClaimStatus(v);
       setHasil(res);
-    } catch (e: any) {
-      if (e.message.includes("404")) {
+    } catch (e: unknown) {
+      const pesan = e instanceof Error ? e.message : String(e);
+      if (pesan.includes("404")) {
         setErrorNotFound(true);
       } else {
-        console.error(e);
+        // Gagal jaringan/5xx tidak boleh berakhir senyap di console — sebelumnya
+        // layar hanya kembali kosong dan tidak terbedakan dari "tidak ditemukan".
+        setErrorLain(pesan);
       }
     } finally {
       setLoading(false);
@@ -87,6 +88,18 @@ export function CekKlaim() {
                 </div>
               )}
 
+              {cari && errorLain && !loading && (
+                <div className="mt-8 flex items-start gap-3 rounded-2xl bg-paper-2 p-5 ring-1 ring-[var(--hairline)]">
+                  <span className="mt-px text-ink-3"><Alert className="h-4 w-4" /></span>
+                  <div>
+                    <p className="text-[13px] font-medium">Pencarian gagal</p>
+                    <p className="mt-2 text-[12px] leading-[1.65] text-ink-3">
+                      Layanan tidak dapat dihubungi. Coba lagi beberapa saat lagi.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {hasil && !loading && (
                 <div className="mt-8">
                   <div className={`rounded-[1.5rem] p-1 ring-1 ${
@@ -96,13 +109,13 @@ export function CekKlaim() {
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
                           <Eyebrow tone={hasil.status === "claimed" ? "sage" : "gold"}>
-                            {hasil.status === "claimed" ? "Sudah diterima" : "Siap diklaim"}
+                            {hasil.status === "claimed" ? "Sudah diterima" : "Menunggu klaim"}
                           </Eyebrow>
                           <p className="mt-4 font-display text-[2.5rem] leading-none tnum tracking-[-0.035em]">
                             {rupiah(hasil.amount)}
                           </p>
                           <p className="mt-2.5 text-[13px] text-ink-3">
-                            {hasil.referenceId} · Desa {hasil.desaName || "Tidak diketahui"}
+                            {hasil.reference} · Desa {hasil.desa} · {hasil.program}
                           </p>
                         </div>
                         <span className={`flex h-11 w-11 items-center justify-center rounded-full ${
@@ -114,15 +127,15 @@ export function CekKlaim() {
 
                       <dl className="mt-7 flex flex-col divide-y divide-[var(--hairline)] text-[13px]">
                         {[
-                          ["Dompet tujuan", <Hash key="w" value={hasil.walletAddress || "0x..."} kepala={10} ekor={8} />],
+                          ["Dompet tujuan", <Hash key="w" value={hasil.wallet} kepala={10} ekor={8} />],
                           ["Jenis dompet", <span key="j" className="text-ink-2">
-                            Milik sendiri
+                            {hasil.jenis_wallet === "mandiri" ? "Milik sendiri" : "Dikelola program (custodial)"}
                           </span>],
-                          ["Merkle leaf", <Hash key="l" value={hasil.merkleLeaf || "0x..."} kepala={10} ekor={6} />],
-                          hasil.txHash
-                            ? ["Transaksi", <Hash key="t" value={hasil.txHash} kepala={10} ekor={6} href={`${PROGRAM.explorer}/tx/${hasil.txHash}`} />]
+                          ["Merkle leaf", <Hash key="l" value={hasil.leaf_hash} kepala={10} ekor={6} />],
+                          hasil.tx_hash
+                            ? ["Transaksi", <Hash key="t" value={hasil.tx_hash} kepala={10} ekor={6} href={`${EXPLORER_BASE}/tx/${hasil.tx_hash}`} />]
                             : ["Transaksi", <span key="t" className="text-ink-4">belum ada</span>],
-                          ["Waktu pencairan", <span key="v" className="tnum text-ink-2">{hasil.claimedAt ? waktu(hasil.claimedAt) : "-"}</span>],
+                          ["Waktu pencairan", <span key="v" className="tnum text-ink-2">{hasil.claimed_at ? waktu(hasil.claimed_at) : "-"}</span>],
                         ].map(([k, v]) => (
                           <div key={String(k)} className="flex items-center justify-between gap-4 py-3">
                             <dt className="text-ink-3">{k}</dt>
@@ -131,30 +144,29 @@ export function CekKlaim() {
                         ))}
                       </dl>
 
+                      {/* Tombol klaim di sini dulunya palsu: `setTimeout(1400)` lalu
+                          mengumumkan "Simulasi berhasil. Rp X dikirim ke dompet di atas,
+                          event FundDisbursed tercatat publik." Tidak ada transaksi yang
+                          dikirim, tidak ada event yang tercatat, dan record tetap `pending`
+                          — persis "menyamarkan simulasi sebagai transaksi nyata" yang
+                          dilarang 07-Security-Privacy-Ethics.md §7, dan yang justru
+                          dinyatakan tidak dilakukan oleh 16-Konfigurasi-Kredensial.md §3.
+                          Penandatanganan klaim lewat wallet warga/relayer belum dibangun,
+                          jadi status ditampilkan apa adanya. */}
                       {hasil.status === "pending" && (
                         <div className="mt-7 border-t border-[var(--hairline)] pt-6">
-                          {tahap === "selesai" ? (
-                            <div className="flex items-start gap-3 rounded-2xl bg-sage-soft p-4 ring-1 ring-sage/20">
-                              <span className="mt-px text-sage"><Check className="h-4 w-4" /></span>
-                              <p className="text-[12px] leading-[1.65] text-ink-2">
-                                Simulasi berhasil. {rupiah(hasil.amount)} dikirim ke dompet di atas,
-                                event <span className="font-mono">FundDisbursed</span> tercatat publik.
+                          <div className="flex items-start gap-3 rounded-2xl bg-paper-2 p-4 ring-1 ring-[var(--hairline)]">
+                            <span className="mt-px text-ink-3"><Coins className="h-4 w-4" /></span>
+                            <div>
+                              <p className="text-[12px] font-medium text-ink-2">Dana belum ditarik</p>
+                              <p className="mt-2 text-[12px] leading-[1.65] text-ink-3">
+                                Anda terdaftar sebagai penerima dan bukti Merkle Anda sudah terkunci
+                                pada root periode ini. Penarikan dilakukan lewat pendamping desa —
+                                penandatanganan klaim langsung dari dompet warga belum tersedia di
+                                portal ini.
                               </p>
                             </div>
-                          ) : (
-                            <>
-                              <Button
-                                disabled={tahap === "menandatangani"}
-                                onClick={() => {
-                                  setTahap("menandatangani");
-                                  setTimeout(() => setTahap("selesai"), 1400);
-                                }}
-                                icon={<ShieldCheck className="h-[15px] w-[15px]" />}
-                              >
-                                {tahap === "menandatangani" ? "Memverifikasi bukti Merkle…" : "Klaim bantuan sekarang"}
-                              </Button>
-                            </>
-                          )}
+                          </div>
                         </div>
                       )}
                     </div>

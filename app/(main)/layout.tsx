@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { Sidebar } from "@/components/nav/Sidebar";
 import { MobileNav } from "@/components/nav/MobileNav";
 import { Topbar } from "@/components/nav/Topbar";
+import { getPeriodeAktif } from "@/lib/periode";
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
@@ -9,12 +10,24 @@ export default async function MainLayout({ children }: { children: React.ReactNo
   const usernameCookie = cookieStore.get("sigap_username")?.value || "";
   const isSuper = usernameCookie === "ITSUP";
 
+  // Pemilih periode hanya relevan untuk pengguna internal — pengunjung portal
+  // publik tidak memilih periode, mereka membuka halaman program per URL.
+  const token = cookieStore.get("sigap_token")?.value;
+  const { id: periodeAktifId, daftar } = roleCookie
+    ? await getPeriodeAktif(token)
+    : { id: "", daftar: [] };
+
   return (
     <>
       <Sidebar initialRole={roleCookie} isSuper={isSuper} />
 
       <div className="lg:pl-72 xl:pl-80 flex flex-col min-h-dvh">
-        <Topbar role={isSuper ? "Super Administrator" : roleCookie} username={usernameCookie || "Guest"} />
+        <Topbar
+          role={isSuper ? "Super Administrator" : roleCookie}
+          username={usernameCookie || "Guest"}
+          periode={daftar.map((p) => ({ id: p.id, namaProgram: p.namaProgram, status: p.status }))}
+          periodeAktifId={periodeAktifId}
+        />
 
         <main className="container-app mx-auto w-full max-w-[1600px] px-4 sm:px-6 pt-5 pb-24 lg:pb-10 flex-1">
           {children}

@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ClientIcon } from "./ClientIcon";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
 
 const MOBILE_MENU = {
   public: [
@@ -13,12 +12,16 @@ const MOBILE_MENU = {
     { href: "/login", label: "Masuk", icon: "ph:sign-in-duotone" },
   ],
   admin: [
-    { href: `/admin/periode/${PERIODE_AKTIF_ID}`, label: "Dashboard", icon: "ph:chart-bar-duotone" },
+    { href: "/admin/periode", label: "Dashboard", icon: "ph:chart-bar-duotone" },
     { href: "/admin/verifikasi", label: "Verifikasi", icon: "ph:check-circle-duotone" },
     { href: "/admin/on-chain", label: "On-chain", icon: "ph:currency-circle-dollar-duotone" },
   ],
   verifikator: [
     { href: "/admin/verifikasi", label: "Verifikasi", icon: "ph:check-circle-duotone" },
+    { href: "/", label: "Publik", icon: "ph:globe-hemisphere-west-duotone" },
+  ],
+  auditor: [
+    { href: "/admin/audit-log", label: "Audit Log", icon: "ph:clock-counter-clockwise-duotone" },
     { href: "/", label: "Publik", icon: "ph:globe-hemisphere-west-duotone" },
   ],
   petugas: [

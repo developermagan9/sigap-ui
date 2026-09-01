@@ -4,15 +4,19 @@ import {
   DistributionList,
   ExplorerLink,
   MetaRow,
+  PeriodSummaryAside,
   ProgramStatsGrid,
   PublicPageHero,
-  PublicSubnav,
   TrailIndicator,
   TransactionsTable,
 } from "@/components/public/PublicShared";
-import { dataset, PROGRAM, ringkasanPublik as R } from "@/lib/mock/data";
+import { ApiClient } from "@/lib/api";
+import { NAMA_JARINGAN } from "@/lib/constants";
 import { angka, persen, rupiah, rupiahRingkas } from "@/lib/format";
 
+/** Detail satu program publik. `periodeId` sekarang UUID periode sungguhan —
+ *  periode yang belum disahkan mengembalikan 404 dari backend (bukan 404 karena
+ *  tidak cocok dengan satu id mock seperti sebelumnya). */
 export default async function HalamanDetailProgram({
   params,
 }: {
@@ -20,13 +24,20 @@ export default async function HalamanDetailProgram({
 }) {
   const { periodeId } = await params;
 
-  if (periodeId !== String(PROGRAM.id)) notFound();
+  let detail;
+  try {
+    detail = await ApiClient.public.getProgramDetail(periodeId);
+  } catch {
+    notFound();
+  }
+
+  const transaksi = await ApiClient.public.getTransactions({ periode_id: periodeId, limit: 8 });
+  const totalAlokasi = detail.total_alokasi ?? 0;
 
   return (
     <main className="overflow-x-hidden pb-24 pt-20 sm:pb-32">
-
       <PublicPageHero
-        eyebrow={`Detail Program · Periode ${PROGRAM.id}`}
+        eyebrow={`Detail Program · ${detail.status}`}
         title={
           <>
             Detail program dan
@@ -36,9 +47,9 @@ export default async function HalamanDetailProgram({
         }
         body={
           <>
-            Halaman ini merangkum angka periode {PROGRAM.periode}, termasuk komposisi kuota,
-            distribusi per wilayah, dan status pencairan terbaru yang dapat dicocokkan dengan
-            data on-chain.
+            Halaman ini merangkum angka periode {detail.nama_program}, termasuk komposisi kuota,
+            distribusi per wilayah, dan status pencairan terbaru yang dapat dicocokkan dengan data
+            on-chain.
           </>
         }
         aside={
@@ -47,10 +58,10 @@ export default async function HalamanDetailProgram({
               Ringkasan periode
             </p>
             <dl className="mt-5 space-y-4 text-[13px]">
-              <MetaRow label="Nama program" value={PROGRAM.nama} />
-              <MetaRow label="Periode" value={PROGRAM.periode} />
-              <MetaRow label="Jaringan" value={PROGRAM.jaringan} />
-              <MetaRow label="Nominal dasar" value={rupiah(PROGRAM.nominalDasar)} mono />
+              <MetaRow label="Nama program" value={detail.nama_program} />
+              <MetaRow label="Status" value={detail.status} />
+              <MetaRow label="Jaringan" value={NAMA_JARINGAN} />
+              <MetaRow label="Nominal dasar" value={rupiah(detail.nominal_dasar)} mono />
             </dl>
           </>
         }
@@ -58,7 +69,7 @@ export default async function HalamanDetailProgram({
 
       <section className="px-4 pb-20 sm:px-8 sm:pb-28">
         <div className="mx-auto max-w-[78rem]">
-          <ProgramStatsGrid />
+          <ProgramStatsGrid detail={detail} />
         </div>
       </section>
 
@@ -75,7 +86,7 @@ export default async function HalamanDetailProgram({
                 </div>
               </div>
               <div className="mt-6">
-                <DistributionList limit={R.perWilayah.length} />
+                <DistributionList perWilayah={detail.per_wilayah} />
               </div>
             </section>
           </Reveal>
@@ -87,16 +98,28 @@ export default async function HalamanDetailProgram({
               </p>
               <h2 className="mt-4 text-[2rem]">Jejak verifikasi</h2>
               <div className="mt-6">
-                <TrailIndicator />
+                <TrailIndicator status={detail.status} />
               </div>
 
               <div className="mt-8 border-t border-[var(--color-line)] pt-6">
                 <dl className="space-y-4 text-[13px]">
-                  <MetaRow label="Rumah tangga diverifikasi" value={angka(R.jumlahTerverifikasi)} mono />
-                  <MetaRow label="Jumlah penerima" value={angka(dataset.alokasi.kuotaPenerima)} mono />
-                  <MetaRow label="Realisasi saat ini" value={persen(R.totalTersalur / R.totalAlokasi)} mono />
-                  <MetaRow label="Dana telah tersalur" value={rupiahRingkas(R.totalTersalur)} mono />
+                  <MetaRow label="Rumah tangga diverifikasi" value={angka(detail.total_verifikasi)} mono />
+                  <MetaRow
+                    label="Jumlah penerima"
+                    value={angka(detail.kuota_penerima ?? detail.jumlah_penerima)}
+                    mono
+                  />
+                  <MetaRow
+                    label="Realisasi saat ini"
+                    value={persen(totalAlokasi > 0 ? detail.total_tersalur / totalAlokasi : 0)}
+                    mono
+                  />
+                  <MetaRow label="Dana telah tersalur" value={rupiahRingkas(detail.total_tersalur)} mono />
                 </dl>
+              </div>
+
+              <div className="mt-8 border-t border-[var(--color-line)] pt-6">
+                <PeriodSummaryAside detail={detail} />
               </div>
             </section>
           </Reveal>
@@ -114,9 +137,9 @@ export default async function HalamanDetailProgram({
                   </p>
                   <h2 className="mt-4 text-[2rem]">Pencairan terbaru pada periode ini</h2>
                 </div>
-                <ExplorerLink />
+                <ExplorerLink address={detail.contract_address} />
               </div>
-              <TransactionsTable limit={8} />
+              <TransactionsTable rows={transaksi.data} />
             </section>
           </Reveal>
         </div>

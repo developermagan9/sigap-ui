@@ -1,0 +1,18 @@
+node_modules
+.next
+.git
+.gitignore
+npm-debug.log*
+# `.env.local` di-exclude sengaja: kalau ikut, `next build` di dalam image akan
+# membacanya dan menimpa nilai --build-arg dari Jenkins. File itu hanya untuk
+# `npm run dev` lokal.
+.env
+.env.local
+.env.*.local
+playwright-report
+test-results
+e2e
+verify*.mjs
+*.md
+Dockerfile
+.dockerignore

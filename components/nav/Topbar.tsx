@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ClientIcon } from "./ClientIcon";
+import { PeriodeSwitcher, type PeriodeOpsi } from "./PeriodeSwitcher";
 
 function useJamSekarang() {
   const [now, setNow] = useState<Date | null>(null);
@@ -15,7 +16,18 @@ function useJamSekarang() {
   return now;
 }
 
-export function Topbar({ role, username }: { role: string; username: string }) {
+export function Topbar({
+  role,
+  username,
+  periode,
+  periodeAktifId,
+}: {
+  role: string;
+  username: string;
+  /** Daftar periode untuk pemilih di topbar. Kosong untuk pengunjung publik. */
+  periode?: PeriodeOpsi[];
+  periodeAktifId?: string;
+}) {
   const now = useJamSekarang();
 
   return (
@@ -33,6 +45,10 @@ export function Topbar({ role, username }: { role: string; username: string }) {
             {role || "Publik"}
           </p>
         </div>
+        {periode && periode.length > 0 && periodeAktifId ? (
+          <PeriodeSwitcher daftar={periode} aktifId={periodeAktifId} />
+        ) : null}
+
         <div className="hidden flex-col items-end leading-tight sm:flex" aria-live="off">
           <span className="font-mono text-[13px] tabular-nums text-[var(--color-ink)]">
             {now ? now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "--:--:--"}

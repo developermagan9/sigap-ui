@@ -8,7 +8,8 @@ export function PageHeader({
 }: {
   eyebrow?: string;
   title: string;
-  description?: string;
+  /** Boleh ReactNode supaya deskripsi bisa memuat tautan (mis. ke detail program). */
+  description?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
@@ -20,7 +21,7 @@ export function PageHeader({
         <h1 className={`font-display text-2xl text-ink sm:text-3xl ${eyebrow ? "mt-2" : ""}`}>
           {title}
         </h1>
-        {description && <p className="mt-2 max-w-2xl text-sm text-ink-3">{description}</p>}
+        {description ? <p className="mt-2 max-w-2xl text-sm text-ink-3">{description}</p> : null}
       </div>
       {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
     </header>

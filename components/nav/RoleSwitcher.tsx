@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ClientIcon } from "./ClientIcon";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
 
 type Role = "admin" | "verifikator" | "petugas";
 
@@ -31,7 +30,7 @@ export function RoleSwitcher({ currentRole }: { currentRole: string }) {
       });
 
       if (res.ok) {
-        if (newRole === "admin") router.push(`/admin/periode/${PERIODE_AKTIF_ID}`);
+        if (newRole === "admin") router.push("/admin/periode");
         else if (newRole === "verifikator") router.push("/admin/verifikasi");
         else if (newRole === "petugas") router.push("/petugas/tugas");
 

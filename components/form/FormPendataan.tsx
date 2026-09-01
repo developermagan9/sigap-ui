@@ -9,7 +9,6 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Field, inputCls, inputErrCls } from "./Field";
 import { Alert, Check, Cross, Users } from "@/components/ui/Icons";
 import { createRumahTangga } from "@/lib/actions";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
 import type { WilayahRow } from "@/lib/api";
 import { rupiah } from "@/lib/format";
 
@@ -38,7 +37,28 @@ const umur = (lahir: string) => {
   return Math.floor((Date.now() - d.getTime()) / 31_557_600_000);
 };
 
-export function FormPendataan({ wilayah }: { wilayah: WilayahRow[] }) {
+/** Kelompokkan wilayah kerja per "Kecamatan, Kabupaten" untuk <optgroup>,
+ *  urut abjad supaya posisi tiap pilihan stabil antar render. */
+function kelompokWilayah(wilayah: WilayahRow[]): [string, WilayahRow[]][] {
+  const grup = new Map<string, WilayahRow[]>();
+  for (const w of wilayah) {
+    const kunci = `${w.kecamatan}, ${w.kabupaten}`;
+    grup.set(kunci, [...(grup.get(kunci) ?? []), w]);
+  }
+  return [...grup.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0], "id"))
+    .map(([k, v]) => [k, [...v].sort((a, b) => a.desa.localeCompare(b.desa, "id"))] as [string, WilayahRow[]]);
+}
+
+export function FormPendataan({
+  wilayah,
+  periodeId,
+}: {
+  wilayah: WilayahRow[];
+  /** Periode program yang sedang aktif — datang dari server component pemanggil
+   *  (lihat lib/periode.ts), bukan lagi konstanta hardcode. */
+  periodeId: string;
+}) {
   const router = useRouter();
   const [namaKepala, setNamaKepala] = useState("");
   const [nik, setNik] = useState("");
@@ -123,7 +143,7 @@ export function FormPendataan({ wilayah }: { wilayah: WilayahRow[] }) {
         skor_kondisi_rumah: rumah,
         skor_akses_pendidikan: didik,
         riwayat_bansos_sebelumnya: riwayat,
-        periode_id: PERIODE_AKTIF_ID,
+        periode_id: periodeId,
         ...(jenisWallet === "mandiri" ? { wallet_address: walletAddress, jenis_wallet: "mandiri" } : {}),
         ...(jenisWallet === "custodial" ? { jenis_wallet: "custodial" } : {}),
         anggota: anggota.map((a) => ({
@@ -183,10 +203,23 @@ export function FormPendataan({ wilayah }: { wilayah: WilayahRow[] }) {
                   />
                 </Field>
 
-                <Field label="Desa" wajib>
+                {/* Dikelompokkan per kabupaten/kecamatan dan diberi label lengkap:
+                    nama desa saja tidak cukup untuk membedakan pilihan begitu
+                    program mencakup lebih dari satu kecamatan — nama desa tidak
+                    unik di Indonesia (ada 98 desa bernama "Sidomulyo"), jadi dua
+                    baris "Sidomulyo" tanpa keterangan tidak bisa dipilih dengan
+                    yakin. Pilihan tetap dibatasi pada wilayah KERJA program,
+                    bukan seluruh 83.762 desa. */}
+                <Field label="Desa" wajib hint={`${wilayah.length} wilayah kerja`}>
                   <select value={wilayahId} onChange={(e) => setWilayahId(e.target.value)} className={inputCls}>
-                    {wilayah.map((w) => (
-                      <option key={w.id} value={w.id}>{w.desa}</option>
+                    {kelompokWilayah(wilayah).map(([grup, daftar]) => (
+                      <optgroup key={grup} label={grup}>
+                        {daftar.map((w) => (
+                          <option key={w.id} value={w.id}>
+                            {w.desa}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </Field>

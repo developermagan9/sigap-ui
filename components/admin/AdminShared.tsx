@@ -2,7 +2,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Check, Cube, Layers, Ledger, Scale, ShieldCheck, Users } from "@/components/ui/Icons";
-import { angka, persen, rupiah, rupiahRingkas } from "@/lib/format";
+import { angka, persen, rupiah, rupiahRingkas, waktu } from "@/lib/format";
 
 /** Label kriteria TOPSIS — cocok dengan `KRITERIA_DEFAULT` di sigap-api/src/mining/mining.service.ts.
  *  Backend cuma menyimpan `bobot_kriteria` sebagai angka mentah tanpa label manusia. */
@@ -221,26 +221,111 @@ export function OnChainSummary({
   );
 }
 
-export function AuditEntries() {
-  const entries = [
-    { at: "20 Agt 2026 09:10", actor: "Verifikator Rina", action: "Approve REC-0042", detail: "Dokumen rumah tangga sesuai hasil kunjungan lapangan." },
-    { at: "20 Agt 2026 10:25", actor: "Admin Fajar", action: "Run clustering", detail: "k = 4, iterasi konvergen 7 langkah." },
-    { at: "20 Agt 2026 10:41", actor: "Admin Fajar", action: "Update bobot", detail: "Pendapatan 35%, tanggungan 25%, disabilitas 20%, rumah 20%." },
-    { at: "20 Agt 2026 11:05", actor: "Admin Fajar", action: "Approve daftar final", detail: "Kuota 185 penerima, Merkle root siap dikunci." },
-    { at: "20 Agt 2026 11:22", actor: "Sistem", action: "Register root on-chain", detail: "Transaksi registerPeriode() berhasil di Polygon Amoy." },
-  ];
+/** Label manusiawi untuk `audit_log.action` yang benar-benar ditulis backend.
+ *  Aksi yang belum terdaftar ditampilkan apa adanya (di-Title Case) alih-alih
+ *  disembunyikan — lebih baik tampil mentah daripada hilang dari jejak audit. */
+const AKSI_LABEL: Record<string, string> = {
+  CREATE_RUMAH_TANGGA: "Input rumah tangga baru",
+  IMPORT_CSV_RUMAH_TANGGA: "Import massal CSV",
+  VERIFIKASI_RUMAH_TANGGA: "Keputusan verifikasi",
+  CREATE_PERIODE_PROGRAM: "Buat periode program",
+  UPDATE_PERIODE_PROGRAM: "Ubah periode program",
+  UPDATE_PERIODE_STATUS: "Ubah status periode",
+  run_clustering: "Jalankan clustering",
+  run_topsis: "Jalankan ranking TOPSIS",
+  run_alokasi: "Jalankan alokasi anggaran",
+  finalize_ranking: "Sahkan daftar final",
+  build_merkle: "Bangun Merkle root",
+  submit_onchain: "Kirim root ke blockchain",
+  AJUKAN_SANGGAHAN: "Ajukan koreksi data",
+  TERIMA_SANGGAHAN: "Koreksi data diterima",
+  TOLAK_SANGGAHAN: "Koreksi data ditolak",
+};
+
+function labelAksi(action: string) {
+  return AKSI_LABEL[action] ?? action.replace(/_/g, " ").toLowerCase();
+}
+
+/** Ringkas `afterState`/`beforeState` jadi satu baris yang bisa dibaca manusia.
+ *  Isi JSON-nya bisa sangat besar (seluruh baris rumah tangga), jadi hanya
+ *  field yang informatif untuk audit yang ditarik keluar. */
+function ringkasanPerubahan(entry: { action: string; beforeState: unknown; afterState: unknown }) {
+  const after = (entry.afterState ?? {}) as Record<string, unknown>;
+  const before = (entry.beforeState ?? {}) as Record<string, unknown>;
+
+  const potong = (v: unknown) => {
+    if (v === null || v === undefined) return null;
+    if (typeof v === "number") return angka(v);
+    if (typeof v === "boolean") return v ? "ya" : "tidak";
+    const t = String(v);
+    return t.length > 60 ? `${t.slice(0, 57)}…` : t;
+  };
+
+  const bagian: string[] = [];
+  if (before.status && after.status) bagian.push(`status ${before.status} → ${after.status}`);
+  else if (after.status) bagian.push(`status ${after.status}`);
+
+  for (const [key, label] of [
+    ["k", "k"],
+    ["silhouette", "silhouette"],
+    ["kuotaPenerima", "kuota"],
+    ["totalAlokasi", "total alokasi"],
+    ["skemaAlokasi", "skema"],
+    ["totalLeaves", "leaf"],
+    ["merkleRoot", "root"],
+    ["totalRanked", "baris diranking"],
+    ["sukses", "baris sukses"],
+    ["gagal", "baris gagal"],
+    ["statusVerifikasi", "verifikasi"],
+    ["catatan", "catatan"],
+  ] as const) {
+    const v = potong(after[key]);
+    if (v !== null) bagian.push(`${label}: ${v}`);
+  }
+
+  return bagian.length > 0 ? bagian.join(" · ") : "Tidak ada detail tambahan yang dicatat.";
+}
+
+export type AuditEntry = {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string;
+  beforeState: unknown;
+  afterState: unknown;
+  createdAt: string;
+  actor: { nama: string; username: string; role: string } | null;
+};
+
+export function AuditEntries({ entries }: { entries: AuditEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <p className="text-[13px] text-[var(--color-ink-3)]">
+        Belum ada aktivitas yang tercatat. Setiap verifikasi, perubahan bobot, dan aksi on-chain akan
+        muncul di sini secara otomatis.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-4">
       {entries.map((entry) => (
-        <article key={`${entry.at}-${entry.action}`} className="rule-card p-5">
+        <article key={entry.id} className="rule-card p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-[14px] text-[var(--color-ink)]">{entry.action}</p>
-              <p className="mt-1 text-[12px] text-[var(--color-ink-4)]">{entry.actor}</p>
-              <p className="mt-3 text-[13px] leading-6 text-[var(--color-ink-3)]">{entry.detail}</p>
+            <div className="min-w-0">
+              <p className="text-[14px] text-[var(--color-ink)]">{labelAksi(entry.action)}</p>
+              <p className="mt-1 text-[12px] text-[var(--color-ink-4)]">
+                {entry.actor ? `${entry.actor.nama} · ${entry.actor.role}` : "Sistem"}
+                {" · "}
+                <span className="font-mono">{entry.entityType}</span>
+              </p>
+              <p className="mt-3 break-words text-[13px] leading-6 text-[var(--color-ink-3)]">
+                {ringkasanPerubahan(entry)}
+              </p>
             </div>
-            <span className="font-mono text-[12px] text-[var(--color-ink-3)]">{entry.at}</span>
+            <span className="shrink-0 font-mono text-[12px] text-[var(--color-ink-3)]">
+              {waktu(entry.createdAt)}
+            </span>
           </div>
         </article>
       ))}

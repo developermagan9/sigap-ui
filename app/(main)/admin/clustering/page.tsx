@@ -3,13 +3,14 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ClusterSummaryCards } from "@/components/admin/AdminShared";
 import { JalankanClustering } from "@/components/admin/JalankanClustering";
 import { ApiClient } from "@/lib/api";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
+import { getPeriodeAktifId } from "@/lib/periode";
 
 export default async function HalamanClustering() {
   const token = (await cookies()).get("sigap_token")?.value;
+  const periodeId = await getPeriodeAktifId(token);
   const [periode, summary] = await Promise.all([
-    ApiClient.periode.getById(PERIODE_AKTIF_ID, token),
-    ApiClient.periode.getSummary(PERIODE_AKTIF_ID, token),
+    ApiClient.periode.getById(periodeId, token),
+    ApiClient.periode.getSummary(periodeId, token),
   ]);
   const clusters = periode.clusterResults ?? [];
 
@@ -26,7 +27,7 @@ export default async function HalamanClustering() {
       <section className="px-4 pt-8 pb-16 sm:px-8">
         <div className="mx-auto max-w-[78rem]">
           <JalankanClustering
-            periodeId={PERIODE_AKTIF_ID}
+            periodeId={periodeId}
             defaultK={periode.kCluster}
             totalVerified={summary.total_verified}
           />

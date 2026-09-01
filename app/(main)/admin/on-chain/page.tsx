@@ -5,13 +5,14 @@ import { Hash } from "@/components/ui/Hash";
 import { OnChainSummary, SummaryRow } from "@/components/admin/AdminShared";
 import { OnChainActions } from "@/components/admin/OnChainActions";
 import { ApiClient } from "@/lib/api";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
+import { getPeriodeAktifId } from "@/lib/periode";
 
 export default async function HalamanOnChain() {
   const token = (await cookies()).get("sigap_token")?.value;
+  const periodeId = await getPeriodeAktifId(token);
   const [periode, status] = await Promise.all([
-    ApiClient.periode.getById(PERIODE_AKTIF_ID, token),
-    ApiClient.blockchain.getStatus(PERIODE_AKTIF_ID, token),
+    ApiClient.periode.getById(periodeId, token),
+    ApiClient.blockchain.getStatus(periodeId, token),
   ]);
 
   const langkah = [
@@ -28,7 +29,7 @@ export default async function HalamanOnChain() {
           eyebrow="Portal Admin"
           title="Penyaluran On-chain"
           description="Root, kontrak, deposit dana, dan progres klaim penerima setelah daftar final disahkan."
-          actions={<OnChainActions periodeId={PERIODE_AKTIF_ID} merkleRoot={periode.merkleRoot} txHash={periode.txHash} />}
+          actions={<OnChainActions periodeId={periodeId} merkleRoot={periode.merkleRoot} txHash={periode.txHash} />}
         />
       </div>
 

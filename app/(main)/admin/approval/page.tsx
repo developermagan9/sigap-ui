@@ -4,11 +4,12 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { ApprovalChecklist } from "@/components/admin/AdminShared";
 import { ApprovalPanel } from "@/components/admin/ApprovalPanel";
 import { ApiClient } from "@/lib/api";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
+import { getPeriodeAktifId } from "@/lib/periode";
 
 export default async function HalamanApproval() {
   const token = (await cookies()).get("sigap_token")?.value;
-  const periode = await ApiClient.periode.getById(PERIODE_AKTIF_ID, token);
+  const periodeId = await getPeriodeAktifId(token);
+  const periode = await ApiClient.periode.getById(periodeId, token);
   const bisaSahkan = periode.status === "alokasi" || periode.status === "reviewed";
 
   return (
@@ -37,7 +38,7 @@ export default async function HalamanApproval() {
             <section className="rule-card p-6">
               <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-ink-3)]">Ringkasan final</p>
               <ApprovalPanel
-                periodeId={PERIODE_AKTIF_ID}
+                periodeId={periodeId}
                 kuotaPenerima={periode.kuotaPenerima ?? 0}
                 totalAlokasi={periode.totalAlokasi ?? 0}
                 merkleRoot={periode.merkleRoot}

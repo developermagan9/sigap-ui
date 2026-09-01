@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PetugasStatsGrid, PetugasTaskCards } from "@/components/petugas/PetugasShared";
 import { ApiClient } from "@/lib/api";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
+import { getPeriodeAktifId } from "@/lib/periode";
 
 export default async function HalamanTugasPetugas() {
   const token = (await cookies()).get("sigap_token")?.value;
-  const { data } = await ApiClient.rumahTangga.getAll({ periode_id: PERIODE_AKTIF_ID, limit: 100 }, token);
+  const periodeId = await getPeriodeAktifId(token);
+  const { data } = await ApiClient.rumahTangga.getAll({ periode_id: periodeId, limit: 100 }, token);
 
   return (
     <main className="overflow-x-hidden pb-16 pt-8">

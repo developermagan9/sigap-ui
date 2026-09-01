@@ -2,13 +2,14 @@ import { cookies } from "next/headers";
 import { RuangKerja } from "@/components/admin/RuangKerja";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApiClient } from "@/lib/api";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
+import { getPeriodeAktifId } from "@/lib/periode";
 
 export default async function HalamanRanking() {
   const token = (await cookies()).get("sigap_token")?.value;
+  const periodeId = await getPeriodeAktifId(token);
   const [periode, ranking] = await Promise.all([
-    ApiClient.periode.getById(PERIODE_AKTIF_ID, token),
-    ApiClient.mining.getRanking(PERIODE_AKTIF_ID, token),
+    ApiClient.periode.getById(periodeId, token),
+    ApiClient.mining.getRanking(periodeId, token),
   ]);
 
   return (
@@ -23,7 +24,7 @@ export default async function HalamanRanking() {
 
       <section className="py-5">
         <RuangKerja
-          periodeId={PERIODE_AKTIF_ID}
+          periodeId={periodeId}
           initialBobot={periode.bobotKriteria}
           initialRanking={ranking.results as any}
           clusterIndexTarget={periode.clusterPrioritas}

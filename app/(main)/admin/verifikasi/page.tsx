@@ -3,16 +3,17 @@ import { Antrean } from "@/components/verifikator/Antrean";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { AdminStatsGrid } from "@/components/admin/AdminShared";
 import { ApiClient } from "@/lib/api";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
+import { getPeriodeAktifId } from "@/lib/periode";
 import { angka } from "@/lib/format";
 
 export default async function HalamanVerifikasiAdmin() {
   const token = (await cookies()).get("sigap_token")?.value;
+  const periodeId = await getPeriodeAktifId(token);
 
   const [rumahTangga, summary, periode] = await Promise.all([
-    ApiClient.rumahTangga.getAll({ periode_id: PERIODE_AKTIF_ID, limit: 100 }, token),
-    ApiClient.periode.getSummary(PERIODE_AKTIF_ID, token),
-    ApiClient.periode.getById(PERIODE_AKTIF_ID, token),
+    ApiClient.rumahTangga.getAll({ periode_id: periodeId, limit: 100 }, token),
+    ApiClient.periode.getSummary(periodeId, token),
+    ApiClient.periode.getById(periodeId, token),
   ]);
 
   // Antrean = berkas yang belum diputuskan. Berkas yang ditandai (flaggedDuplicate)

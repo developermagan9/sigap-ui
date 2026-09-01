@@ -45,7 +45,7 @@ export default async function HalamanAdminPeriode({
   const [summary, ranking, chainStatus] = await Promise.all([
     ApiClient.periode.getSummary(id, token),
     ApiClient.mining.getRanking(id, token),
-    ApiClient.blockchain.getStatus(id, token).catch(() => ({ total_recipients: 0, total_claimed: 0, total_pending: 0, explorer_url: "" })),
+    ApiClient.blockchain.getStatus(id, token).catch(() => ({ total_recipients: 0, total_claimed: 0, total_pending: 0, explorer_url: null })),
   ]);
 
   const clusters = periode.clusterResults ?? [];

@@ -1,6 +1,3 @@
-"use client";
-
-import { useState } from "react";
 import { Reveal } from "@/components/ui/Reveal";
 import {
   DistributionList,
@@ -9,18 +6,31 @@ import {
   PublicPageHero,
   TransactionsTable,
 } from "@/components/public/PublicShared";
-import { ringkasanPublik as R } from "@/lib/mock/data";
+import { TabPanel } from "@/components/public/TabPanel";
+import { ApiClient } from "@/lib/api";
 import { angka, rupiahRingkas } from "@/lib/format";
 
-const TABS = [
-  { key: "onchain", label: "Pencairan On-chain" },
-  { key: "wilayah", label: "Distribusi Wilayah" },
-] as const;
+/** Halaman Pencairan publik — dua tab, keduanya dari data backend nyata. */
+export default async function HalamanPencairan() {
+  const programs = await ApiClient.public.getPrograms();
+  const terbaru = programs[0];
 
-type TabKey = (typeof TABS)[number]["key"];
+  if (!terbaru) {
+    return (
+      <main className="overflow-x-hidden pb-24 pt-20 sm:pb-32">
+        <PublicPageHero
+          eyebrow="Portal Publik · Pencairan"
+          title="Belum ada pencairan"
+          body="Data pencairan muncul setelah daftar penerima sebuah periode disahkan."
+        />
+      </main>
+    );
+  }
 
-export default function HalamanPencairan() {
-  const [tab, setTab] = useState<TabKey>("onchain");
+  const [detail, transaksi] = await Promise.all([
+    ApiClient.public.getProgramDetail(terbaru.id),
+    ApiClient.public.getTransactions({ periode_id: terbaru.id, limit: 50 }),
+  ]);
 
   return (
     <main className="overflow-x-hidden pb-24 pt-20 sm:pb-32">
@@ -45,9 +55,9 @@ export default function HalamanPencairan() {
               Ringkasan pencairan
             </p>
             <dl className="mt-5 space-y-4 text-[13px]">
-              <MetaRow label="Dana tersalur" value={rupiahRingkas(R.totalTersalur)} mono />
-              <MetaRow label="Transaksi tampil" value={angka(R.transaksiTerbaru.length)} mono />
-              <MetaRow label="Wilayah tercakup" value={angka(R.perWilayah.length)} mono />
+              <MetaRow label="Dana tersalur" value={rupiahRingkas(detail.total_tersalur)} mono />
+              <MetaRow label="Penerima terdaftar" value={angka(detail.jumlah_penerima)} mono />
+              <MetaRow label="Wilayah tercakup" value={angka(detail.per_wilayah.length)} mono />
             </dl>
           </>
         }
@@ -55,57 +65,53 @@ export default function HalamanPencairan() {
 
       <section className="px-4 sm:px-8">
         <div className="mx-auto max-w-[78rem]">
-          <div className="mb-6 flex gap-2 border-b border-[var(--color-line)]">
-            {TABS.map((t) => (
-              <button
-                key={t.key}
-                type="button"
-                onClick={() => setTab(t.key)}
-                className={`border-b-2 px-4 py-3 text-[13px] uppercase tracking-[0.14em] transition-colors ${
-                  tab === t.key
-                    ? "border-[var(--color-primary)] text-[var(--color-ink)]"
-                    : "border-transparent text-[var(--color-ink-3)] hover:text-[var(--color-ink)]"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+          <TabPanel
+            tabs={[
+              {
+                key: "onchain",
+                label: "Pencairan On-chain",
+                content: (
+                  <Reveal>
+                    <section className="rule-card p-6 sm:p-8">
+                      <div className="flex flex-col gap-4 border-b border-[var(--color-line)] pb-5 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-ink-3)]">
+                            Buku besar publik
+                          </p>
+                          <h2 className="mt-4 text-[2rem]">Pencairan on-chain terbaru</h2>
+                        </div>
+                        <ExplorerLink address={detail.contract_address} />
+                      </div>
 
-          {tab === "onchain" ? (
-            <Reveal>
-              <section className="rule-card p-6 sm:p-8">
-                <div className="flex flex-col gap-4 border-b border-[var(--color-line)] pb-5 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-ink-3)]">
-                      Buku besar publik
-                    </p>
-                    <h2 className="mt-4 text-[2rem]">Pencairan on-chain terbaru</h2>
-                  </div>
-                  <ExplorerLink />
-                </div>
+                      <TransactionsTable rows={transaksi.data} />
 
-                <TransactionsTable />
-
-                <p className="mt-5 text-[13px] leading-6 text-[var(--color-ink-3)]">
-                  Tautan hash membuka block explorer. Identitas asli tetap off-chain dari perspektif
-                  portal publik ini; yang ditampilkan hanya kode anonim dan wilayah.
-                </p>
-              </section>
-            </Reveal>
-          ) : (
-            <Reveal>
-              <section className="rule-card p-6 sm:p-8">
-                <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-ink-3)]">
-                  Sebaran penerima
-                </p>
-                <h2 className="mt-4 text-[2rem]">Distribusi per wilayah</h2>
-                <div className="mt-8">
-                  <DistributionList limit={R.perWilayah.length} />
-                </div>
-              </section>
-            </Reveal>
-          )}
+                      <p className="mt-5 text-[13px] leading-6 text-[var(--color-ink-3)]">
+                        Tautan hash membuka block explorer. Identitas asli tetap off-chain dari perspektif
+                        portal publik ini; yang ditampilkan hanya kode anonim dan wilayah.
+                      </p>
+                    </section>
+                  </Reveal>
+                ),
+              },
+              {
+                key: "wilayah",
+                label: "Distribusi Wilayah",
+                content: (
+                  <Reveal>
+                    <section className="rule-card p-6 sm:p-8">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--color-ink-3)]">
+                        Sebaran penerima
+                      </p>
+                      <h2 className="mt-4 text-[2rem]">Distribusi per wilayah</h2>
+                      <div className="mt-8">
+                        <DistributionList perWilayah={detail.per_wilayah} />
+                      </div>
+                    </section>
+                  </Reveal>
+                ),
+              },
+            ]}
+          />
         </div>
       </section>
     </main>

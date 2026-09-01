@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Layers, Scale, Link as LinkIcon } from "@/components/ui/Icons";
 import { LoginForm } from "@/components/auth/LoginForm";
-import { PROGRAM, ringkasanPublik as R } from "@/lib/mock/data";
+import { ApiClient } from "@/lib/api";
+import { NAMA_JARINGAN } from "@/lib/constants";
 import { angka, persen, rupiahRingkas } from "@/lib/format";
 
 export const metadata: Metadata = {
@@ -27,13 +28,23 @@ const PIPELINE = [
   },
 ];
 
-export default function LoginPage() {
-  const persenTersalur = R.totalAlokasi > 0 ? R.totalTersalur / R.totalAlokasi : 0;
+export default async function LoginPage() {
+  // Statistik panel kiri dibaca dari API publik (tanpa token) — halaman login
+  // memang dilihat sebelum ada sesi, jadi hanya endpoint publik yang boleh dipakai.
+  const programs = await ApiClient.public.getPrograms().catch(() => []);
+  const detail = programs[0] ? await ApiClient.public.getProgramDetail(programs[0].id).catch(() => null) : null;
+
+  const totalAlokasi = detail?.total_alokasi ?? 0;
+  const persenTersalur = totalAlokasi > 0 ? (detail?.total_tersalur ?? 0) / totalAlokasi : 0;
 
   const STATS = [
-    { label: "Program aktif", value: PROGRAM.nama, hint: PROGRAM.periode },
-    { label: "Dana tersalur", value: rupiahRingkas(R.totalTersalur), hint: `${persen(persenTersalur)} dari alokasi` },
-    { label: "Penerima terverifikasi", value: angka(R.jumlahTerverifikasi), hint: PROGRAM.jaringan },
+    { label: "Program aktif", value: detail?.nama_program ?? "Belum ada periode disahkan", hint: detail?.status ?? "—" },
+    {
+      label: "Dana tersalur",
+      value: rupiahRingkas(detail?.total_tersalur ?? 0),
+      hint: `${persen(persenTersalur)} dari alokasi`,
+    },
+    { label: "Penerima terverifikasi", value: angka(detail?.total_verifikasi ?? 0), hint: NAMA_JARINGAN },
   ];
 
   return (

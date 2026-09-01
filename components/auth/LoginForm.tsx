@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "@/components/ui/Icons";
 import { LoadingButton } from "@/components/ui/LoadingButton";
-import { PERIODE_AKTIF_ID } from "@/lib/constants";
 
 export function LoginForm() {
   const [username, setUsername] = useState("");
@@ -35,11 +34,13 @@ export function LoginForm() {
 
       // Redirect based on role
       if (role === "admin" || username === "ITSUP") {
-        router.push(`/admin/periode/${PERIODE_AKTIF_ID}`);
+        router.push("/admin/periode");
       } else if (role === "verifikator") {
         router.push("/admin/verifikasi");
       } else if (role === "petugas") {
         router.push("/petugas/tugas");
+      } else if (role === "auditor") {
+        router.push("/admin/audit-log");
       } else {
         router.push("/");
       }

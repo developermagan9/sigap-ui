@@ -2,7 +2,8 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { ApiClient } from "./api";
+import { ApiClient, type ImportCsvResult } from "./api";
+import { COOKIE_PERIODE } from "./periode";
 
 async function getToken(): Promise<string> {
   const cookieStore = await cookies();
@@ -101,5 +102,90 @@ export async function submitOnchain(periodeId: string) {
   const token = await getToken();
   const result = await ApiClient.blockchain.submitOnchain(periodeId, token);
   revalidatePath("/admin/on-chain");
+  return result;
+}
+
+/** Ganti periode program yang sedang dilihat (FE-5 / item O).
+ *
+ *  Disimpan di cookie, bukan query param, supaya kedelapan halaman admin/petugas
+ *  yang tidak membawa `[id]` di URL ikut berpindah tanpa prop-drilling — dan
+ *  supaya tautan yang dibagikan tidak diam-diam membawa periode milik orang lain.
+ *  `revalidatePath("/", "layout")` membuang cache seluruh pohon rute sekaligus,
+ *  jadi tidak ada halaman yang tertinggal menampilkan periode lama. */
+export async function pilihPeriode(periodeId: string) {
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_PERIODE, periodeId, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+  revalidatePath("/", "layout");
+}
+
+export async function createPeriode(data: {
+  nama_program: string;
+  anggaran_total: number;
+  biaya_operasional?: number;
+  k_cluster?: number;
+  bobot_kriteria: Record<string, number>;
+  skema_alokasi?: string;
+  nominal_dasar?: number;
+}) {
+  const token = await getToken();
+  const periode = await ApiClient.periode.create(data, token);
+  // Periode yang baru dibuat langsung jadi periode aktif — kalau tidak, admin
+  // harus memilihnya manual dulu sebelum bisa mengisi data ke dalamnya.
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_PERIODE, periode.id, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+  revalidatePath("/", "layout");
+  return periode;
+}
+
+export async function updatePeriode(id: string, data: Record<string, unknown>) {
+  const token = await getToken();
+  const result = await ApiClient.periode.update(id, data, token);
+  revalidatePath("/", "layout");
+  return result;
+}
+
+/** Daftarkan satu desa sebagai wilayah kerja. Hanya kode Kepmendagri yang
+ *  dikirim — nama provinsi/kabupaten/kecamatan/desa diambil backend dari tabel
+ *  referensi, jadi kombinasi yang mustahil tidak bisa tersimpan dari sini. */
+export async function createWilayah(data: { kode: string }) {
+  const token = await getToken();
+  const result = await ApiClient.wilayah.create(data, token);
+  revalidatePath("/admin/wilayah");
+  revalidatePath("/petugas/pendataan");
+  return result;
+}
+
+/** Satu tingkat referensi wilayah untuk dropdown bertingkat di form wilayah.
+ *  Dibuat sebagai Server Action supaya token sesi tidak perlu sampai ke klien. */
+export async function daftarWilayahReferensi(induk?: string) {
+  const token = await getToken();
+  const hasil = await ApiClient.wilayah.referensi(induk, token);
+  return hasil.data;
+}
+
+/** Cari desa/kelurahan lintas provinsi berikut jalur lengkapnya. */
+export async function cariDesaReferensi(q: string) {
+  const token = await getToken();
+  return ApiClient.wilayah.cariDesa(q, token);
+}
+
+/** Unggah CSV massal. Server Action menerima `FormData` langsung dari <form>,
+ *  jadi file-nya tidak perlu dibaca ke memori klien dulu. */
+export async function importRumahTanggaCsv(formData: FormData): Promise<ImportCsvResult> {
+  const token = await getToken();
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) {
+    throw new Error("Pilih file CSV terlebih dahulu.");
+  }
+  const periodeId = (formData.get("periode_id") as string | null) || undefined;
+  const result = await ApiClient.rumahTangga.importCsv(file, periodeId, token);
+  revalidatePath("/petugas/tugas");
+  revalidatePath("/petugas/riwayat");
+  revalidatePath("/admin/verifikasi");
   return result;
 }
