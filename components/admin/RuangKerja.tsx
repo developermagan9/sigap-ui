@@ -40,8 +40,7 @@ export function RuangKerja({
   initialBobot,
   initialRanking,
   clusterIndexTarget,
-  nominalDasar,
-  biayaOperasional,
+  nominalDasar: nominalDasarAwal,
   terkunci: terkunciAwal,
 }: {
   periodeId: string;
@@ -49,7 +48,6 @@ export function RuangKerja({
   initialRanking: RankingRow[];
   clusterIndexTarget: number[];
   nominalDasar: number;
-  biayaOperasional: number;
   /** true kalau periode sudah lewat tahap 'alokasi' (approved/disbursed dst) — ranking tidak boleh diubah lagi. */
   terkunci: boolean;
 }) {
@@ -60,6 +58,13 @@ export function RuangKerja({
   );
 
   const [mentah, setMentah] = useState<Record<string, number>>(dasar);
+  // Nominal boleh disetel ulang di sini setiap kali admin akan menjalankan
+  // ranking & alokasi lagi — bukan cuma nilai tetap dari saat halaman dimuat.
+  // `run-alokasi` menerimanya selama periode belum reviewed/approved/disbursed
+  // (lihat STATUS_TERKUNCI di mining.service.ts). Skema alokasi sengaja selalu
+  // "flat" — semua keluarga yang lolos cutoff dapat nominal yang sama rata —
+  // dan biaya operasional selalu 0, seluruh pagu disalurkan penuh.
+  const [nominalDasar, setNominalDasar] = useState(nominalDasarAwal);
   const [ranking, setRanking] = useState<RankingRow[]>(initialRanking);
   const [alokasiMeta, setAlokasiMeta] = useState<AlokasiMeta | null>(null);
   const [pilih, setPilih] = useState<RankingRow | null>(null);
@@ -100,13 +105,7 @@ export function RuangKerja({
     setMenjalankan(true);
     setJalankanError(null);
     try {
-      const hasil = await runTopsisAndAlokasi(
-        periodeId,
-        bobot,
-        clusterIndexTarget,
-        nominalDasar,
-        biayaOperasional,
-      );
+      const hasil = await runTopsisAndAlokasi(periodeId, bobot, clusterIndexTarget, nominalDasar);
       setRanking(hasil.ranking as RankingRow[]);
       setHalaman(1);
       const a = hasil.alokasi as any;
@@ -197,7 +196,34 @@ export function RuangKerja({
                   })}
                 </div>
 
-                <div className="mt-8 flex flex-wrap items-center gap-3">
+                <div className="mt-8 border-t border-[var(--hairline)] pt-6">
+                  <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-ink-3">
+                    Alokasi dana
+                  </p>
+                  <div className="mt-4">
+                    <label className="block">
+                      <span className="text-[12px] text-ink-3">Nominal dasar per keluarga (Rp)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        disabled={terkunci}
+                        value={nominalDasar}
+                        onChange={(e) => setNominalDasar(e.target.value === "" ? 0 : +e.target.value)}
+                        className="tnum mt-1.5 w-full rounded border border-[var(--color-line)] bg-paper-2 px-3 py-2
+                          text-[14px] text-ink outline-none transition-colors focus:border-[var(--color-primary)]
+                          disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </label>
+                  </div>
+
+                  <p className="mt-3 text-[11px] leading-[1.6] text-ink-4">
+                    Nominal dibagi rata ke setiap keluarga yang lolos cutoff — berlaku saat
+                    &ldquo;Jalankan ranking&rdquo; ditekan. Pagu anggaran sendiri hanya bisa diubah selama
+                    periode masih berstatus draft.
+                  </p>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center gap-3">
                   <Button
                     variant="ghost"
                     onClick={() => setMentah(dasar)}

@@ -29,7 +29,6 @@ export default async function HalamanRanking() {
           initialRanking={ranking.results as any}
           clusterIndexTarget={periode.clusterPrioritas}
           nominalDasar={periode.nominalDasar}
-          biayaOperasional={periode.biayaOperasional}
           terkunci={periode.status === "approved" || periode.status === "disbursed"}
         />
       </section>

@@ -47,6 +47,8 @@ export type PeriodeProgram = {
   bobotKriteria: Record<string, number>;
   skemaAlokasi: string;
   nominalDasar: number;
+  /** Skema `berjenjang` saja — pengali nominal per label cluster. `null` kalau belum pernah disetel. */
+  faktorCluster: Record<string, number> | null;
   kuotaPenerima: number | null;
   totalAlokasi: number | null;
   sisaAnggaran: number | null;
@@ -303,6 +305,7 @@ export const ApiClient = {
       bobot_kriteria: Record<string, number>;
       skema_alokasi?: string;
       nominal_dasar?: number;
+      faktor_cluster?: Record<string, number>;
     }, token?: string): Promise<PeriodeProgram> =>
       normalizePeriode(await fetchApi<any>('/periode-program', { method: 'POST', body: JSON.stringify(data), token })),
     update: async (id: string, data: Record<string, unknown>, token?: string): Promise<PeriodeProgram> =>
@@ -349,9 +352,6 @@ export const ApiClient = {
         `/wilayah/referensi/cari?q=${encodeURIComponent(q)}`,
         { token },
       ),
-    /** Hanya kode desa yang dikirim — nama diambil server dari tabel referensi. */
-    create: (data: { kode: string }, token?: string) =>
-      fetchApi<WilayahRow>('/wilayah', { method: 'POST', body: JSON.stringify(data), token }),
   },
   sanggahan: {
     create: (rumahTanggaId: string, data: { alasan: string; data_baru: Record<string, unknown> }, token?: string) =>

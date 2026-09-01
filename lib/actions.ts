@@ -64,14 +64,16 @@ export async function runTopsisAndAlokasi(
   bobotKriteria: Record<string, number>,
   clusterIndexTarget: number[],
   nominalDasar: number,
-  biayaOperasional: number,
-  skemaAlokasi: string = "flat",
 ) {
   const token = await getToken();
   await ApiClient.mining.runTopsis(periodeId, { clusterIndexTarget, bobotKriteria }, token);
+  // Skema alokasi selalu "flat": setiap keluarga yang lolos cutoff dapat
+  // nominal yang sama rata, tidak dibedakan per tingkat cluster (skema
+  // `berjenjang`/`proporsional` didukung backend tapi sengaja tidak dipilih
+  // dari UI ini). Biaya operasional selalu 0 — seluruh pagu disalurkan penuh.
   const alokasi = await ApiClient.mining.runAlokasi(
     periodeId,
-    { skemaAlokasi, nominalDasar, biayaOperasional },
+    { skemaAlokasi: "flat", nominalDasar, biayaOperasional: 0 },
     token,
   );
   const ranking = await ApiClient.mining.getRanking(periodeId, token);
@@ -149,19 +151,9 @@ export async function updatePeriode(id: string, data: Record<string, unknown>) {
   return result;
 }
 
-/** Daftarkan satu desa sebagai wilayah kerja. Hanya kode Kepmendagri yang
- *  dikirim — nama provinsi/kabupaten/kecamatan/desa diambil backend dari tabel
- *  referensi, jadi kombinasi yang mustahil tidak bisa tersimpan dari sini. */
-export async function createWilayah(data: { kode: string }) {
-  const token = await getToken();
-  const result = await ApiClient.wilayah.create(data, token);
-  revalidatePath("/admin/wilayah");
-  revalidatePath("/petugas/pendataan");
-  return result;
-}
-
-/** Satu tingkat referensi wilayah untuk dropdown bertingkat di form wilayah.
- *  Dibuat sebagai Server Action supaya token sesi tidak perlu sampai ke klien. */
+/** Satu tingkat referensi wilayah untuk dropdown alamat bertingkat di form
+ *  pendataan KK. Dibuat sebagai Server Action supaya token sesi tidak perlu
+ *  sampai ke klien. */
 export async function daftarWilayahReferensi(induk?: string) {
   const token = await getToken();
   const hasil = await ApiClient.wilayah.referensi(induk, token);

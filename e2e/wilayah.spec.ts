@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Dropdown wilayah bertingkat di /admin/wilayah.
+ * Dropdown alamat bertingkat di form input KK (`/petugas/pendataan`).
+ *
+ * Sebelumnya ini diuji di `/admin/wilayah`; halaman itu dihapus — wilayah kerja
+ * tidak lagi didaftarkan admin lebih dulu, alamatnya dipilih petugas langsung
+ * saat pendataan dan barisnya dibuat backend dari kode desa.
  *
  * Yang dijaga: memilih satu tingkat harus MEMPERSEMPIT tingkat berikutnya ke
  * anak-anaknya saja — memilih DI Yogyakarta menghasilkan lima kabupaten/kota
@@ -9,12 +13,12 @@ import { test, expect } from '@playwright/test';
  * kalau cascade-nya putus, form kembali jadi daftar datar yang tidak berguna.
  */
 
-async function loginAdmin(page: import('@playwright/test').Page) {
+async function loginPetugas(page: import('@playwright/test').Page) {
   await page.goto('/login');
-  await page.getByPlaceholder('admin / verifikator / petugas').fill('admin');
+  await page.getByPlaceholder('admin / verifikator / petugas').fill('petugas');
   await page.locator('input[type="password"]').fill('password123');
   await page.getByRole('button', { name: /masuk/i }).click();
-  await page.waitForURL((url) => /^\/admin\/periode\//.test(new URL(url).pathname));
+  await page.waitForURL('**/petugas/tugas');
 }
 
 /** `<select>` satu tingkat, dikenali lewat atribut `name`-nya.
@@ -25,10 +29,10 @@ function pilihan(page: import('@playwright/test').Page, tingkat: string) {
   return page.locator(`select[name="wilayah-${tingkat}"]`);
 }
 
-test.describe('Wilayah bertingkat', () => {
+test.describe('Wilayah bertingkat di form pendataan', () => {
   test.beforeEach(async ({ page }) => {
-    await loginAdmin(page);
-    await page.goto('/admin/wilayah');
+    await loginPetugas(page);
+    await page.goto('/petugas/pendataan');
   });
 
   test('provinsi terisi dari referensi nasional', async ({ page }) => {

@@ -10,6 +10,7 @@ import { Reveal } from "@/components/ui/Reveal";
 import { Stat } from "@/components/ui/Stat";
 import { ArrowRight, Cube, Layers, Ledger, Scale, ShieldCheck, Users } from "@/components/ui/Icons";
 import { BobotList, ClusterSummaryCards } from "@/components/admin/AdminShared";
+import { PengaturanAlokasi } from "@/components/admin/PengaturanAlokasi";
 import { ApiClient } from "@/lib/api";
 import { angka, rupiah, rupiahRingkas } from "@/lib/format";
 
@@ -146,6 +147,20 @@ export default async function HalamanAdminPeriode({
         </div>
       </section>
 
+      {periode.status === "draft" && (
+        <section className="px-4 py-5 sm:px-8">
+          <div className="mx-auto max-w-[78rem]">
+            <PengaturanAlokasi
+              periodeId={id}
+              awal={{
+                anggaranTotal: periode.anggaranTotal,
+                nominalDasar: periode.nominalDasar,
+              }}
+            />
+          </div>
+        </section>
+      )}
+
       <section className="px-4 py-5 sm:px-8">
         <div className="mx-auto max-w-[78rem]">
           {clusters.length === 0 ? (
@@ -211,7 +226,6 @@ export default async function HalamanAdminPeriode({
           initialRanking={ranking.results as any}
           clusterIndexTarget={periode.clusterPrioritas}
           nominalDasar={periode.nominalDasar}
-          biayaOperasional={periode.biayaOperasional}
           terkunci={periode.status === "approved" || periode.status === "disbursed"}
         />
       </section>
