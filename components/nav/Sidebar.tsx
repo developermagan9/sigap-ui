@@ -20,7 +20,6 @@ const MENU_ITEMS = {
   admin: [
     { href: "/admin/periode", label: "Dashboard Program", icon: "ph:chart-bar-duotone" },
     { href: "/admin/periode/baru", label: "Periode Baru", icon: "ph:plus-circle-duotone" },
-    { href: "/admin/wilayah", label: "Wilayah Kerja", icon: "ph:map-pin-duotone" },
     { href: "/admin/verifikasi", label: "Verifikasi Data", icon: "ph:check-circle-duotone" },
     { href: "/admin/sanggahan", label: "Sanggahan Data", icon: "ph:chat-centered-text-duotone" },
     { href: "/admin/clustering", label: "Analisis Clustering", icon: "ph:intersect-duotone" },

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Inter, Poppins } from "next/font/google";
+import { ToastProvider } from "@/components/ui/Toast";
 import "./globals.css";
 
 const fraunces = localFont({
@@ -53,7 +54,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       data-scroll-behavior="smooth"
       className={`${fraunces.variable} ${jakarta.variable} ${mono.variable} ${poppins.variable} ${inter.variable}`}
     >
-      <body className="grain min-h-dvh antialiased">{children}</body>
+      <body className="grain min-h-dvh antialiased">
+        {/* Di root, bukan di (main)/layout: notifikasi hasil aksi harus tetap
+            tampil setelah halaman berpindah, mis. "data tersimpan" yang dibaca
+            di halaman riwayat setelah form pendataan ditinggalkan. */}
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }
