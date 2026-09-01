@@ -19,8 +19,11 @@ services:
     ports:
       - "3000:3000"
     healthcheck:
-      # busybox wget ikut di image node:20-alpine. Route "/" publik (proxy.ts).
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/"]
+      # /health = route handler statis (app/health/route.ts), TIDAK menyentuh
+      # API backend. Route "/" tidak dipakai di sini karena dia Server Component
+      # yang fetch ke backend saat render — kalau backend belum siap, "/" balas
+      # 500 dan healthcheck ikut merah walau FE-nya sehat.
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
       interval: 10s
       timeout: 5s
       retries: 6

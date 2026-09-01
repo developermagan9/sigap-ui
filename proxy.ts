@@ -5,6 +5,7 @@ type Role = "admin" | "verifikator" | "petugas" | "auditor";
 
 const PUBLIC_PATHS = [
   "/",
+  "/health",
   "/cek-status",
   "/klaim",
   "/metodologi",
