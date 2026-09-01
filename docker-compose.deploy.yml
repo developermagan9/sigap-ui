@@ -19,11 +19,15 @@ services:
     ports:
       - "3000:3000"
     healthcheck:
-      # /health = route handler statis (app/health/route.ts), TIDAK menyentuh
-      # API backend. Route "/" tidak dipakai di sini karena dia Server Component
-      # yang fetch ke backend saat render — kalau backend belum siap, "/" balas
-      # 500 dan healthcheck ikut merah walau FE-nya sehat.
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      # Pakai `node` (pasti ada di image) alih-alih wget/curl, dan cek status
+      # code eksplisit. /health = route handler statis (app/health/route.ts),
+      # TIDAK menyentuh API backend — route "/" dihindari karena dia Server
+      # Component yang fetch ke backend saat render.
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "require('http').get('http://127.0.0.1:3000/health',r=>process.exit(r.statusCode<400?0:1)).on('error',()=>process.exit(1))"
       interval: 10s
       timeout: 5s
       retries: 6

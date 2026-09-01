@@ -108,8 +108,14 @@ pipeline {
             fi
             sleep 3
           done
-          echo "GAGAL - UI tidak sehat setelah 120 detik. Log:"
-          docker compose -f "$COMPOSE_FILE" logs --tail=200 sigap-ui
+          echo "GAGAL - UI tidak sehat setelah 120 detik."
+          echo "===== compose logs ====="
+          docker compose -f "$COMPOSE_FILE" logs --tail=200 sigap-ui || true
+          echo "===== healthcheck detail (State.Health) ====="
+          docker inspect --format '{{json .State.Health}}' "$cid" || true
+          echo "===== probe manual dari dalam container ====="
+          docker exec "$cid" node -e "require('http').get('http://127.0.0.1:3000/health',r=>{let b='';r.on('data',c=>b+=c);r.on('end',()=>console.log('GET /health ->',r.statusCode,b.slice(0,200)))}).on('error',e=>console.log('GET /health ERROR:',e.message))" || true
+          docker exec "$cid" node -e "require('http').get('http://127.0.0.1:3000/',r=>{console.log('GET / ->',r.statusCode);r.resume()}).on('error',e=>console.log('GET / ERROR:',e.message))" || true
           exit 1
         '''
       }
