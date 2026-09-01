@@ -7,11 +7,13 @@ import { ArrowRight } from "@/components/ui/Icons";
 import { importRumahTanggaCsv } from "@/lib/actions";
 import type { ImportCsvResult } from "@/lib/api";
 
-/** Contoh isi file, sekaligus dokumentasi format yang bisa langsung diunduh. */
+/** Contoh isi file, sekaligus dokumentasi format yang bisa langsung diunduh.
+ *  Alamat memakai `kode_wilayah` (kode desa Kepmendagri), bukan nama desa:
+ *  nama desa tidak unik di Indonesia dan barisnya ditolak kalau ambigu. */
 const CONTOH_CSV = [
-  "no_kk,nik_kepala_keluarga,nama_kepala_keluarga,alamat_detail,desa,pendapatan_per_kapita,skor_kondisi_rumah,skor_akses_pendidikan,riwayat_bansos_sebelumnya,nik,nama,hubungan,tanggal_lahir,status_disabilitas,is_tanggungan",
-  "3273010101800001,3273010101800001,Budi Santoso,Jl. Mawar No. 1,Sukamaju,450000,2,3,false,,,kepala,1980-01-01,false,true",
-  "3273010101800002,3273010101800002,Siti Aminah,Jl. Melati No. 2,Sukamaju,380000,1,2,false,,,kepala,1985-02-02,false,true",
+  "no_kk,nik_kepala_keluarga,nama_kepala_keluarga,alamat_detail,kode_wilayah,pendapatan_per_kapita,skor_kondisi_rumah,skor_akses_pendidikan,riwayat_bansos_sebelumnya,nik,nama,hubungan,tanggal_lahir,status_disabilitas,is_tanggungan",
+  "3273010101800001,3273010101800001,Budi Santoso,RT 01/RW 05 Jl. Mawar No. 1,34.04.01.2001,450000,2,3,false,,,kepala,1980-01-01,false,true",
+  "3273010101800002,3273010101800002,Siti Aminah,RT 02/RW 01 Jl. Melati No. 2,34.04.01.2001,380000,1,2,false,,,kepala,1985-02-02,false,true",
   "3273010101800002,,,,,,,,,3273010101800012,Rina Aminah,anak,2015-06-06,true,true",
 ].join("\n");
 
@@ -70,9 +72,12 @@ export function ImportCsv({ periodeId }: { periodeId: string }) {
       <h2 className="mt-4 text-[1.6rem]">Unggah CSV hasil pendataan lapangan</h2>
       <p className="mt-3 max-w-3xl text-[13px] leading-6 text-[var(--color-ink-3)]">
         Satu baris = satu anggota keluarga, dikelompokkan lewat kolom <code className="font-mono">no_kk</code>.
-        Kolom rumah tangga cukup diisi pada baris <code className="font-mono">hubungan=kepala</code>. Kolom{" "}
-        <code className="font-mono">desa</code> boleh diganti <code className="font-mono">wilayah_id</code> kalau
-        UUID-nya sudah diketahui. Pemeriksaan duplikat NIK/No. KK sama persis dengan form input satu per satu.
+        Kolom rumah tangga cukup diisi pada baris <code className="font-mono">hubungan=kepala</code>. Untuk
+        alamat, <code className="font-mono">kode_wilayah</code> (kode desa Kepmendagri, mis.{" "}
+        <code className="font-mono">34.04.01.2001</code>) adalah kolom yang paling aman — desa yang belum
+        pernah didata pun dibuatkan sendiri oleh sistem. Kolom <code className="font-mono">desa</code> hanya
+        dipakai kalau namanya tidak ambigu, dan <code className="font-mono">wilayah_id</code> kalau UUID-nya
+        sudah diketahui. Pemeriksaan duplikat NIK/No. KK sama persis dengan form input satu per satu.
       </p>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">

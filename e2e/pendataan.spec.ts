@@ -20,14 +20,36 @@ async function loginPetugas(page: Page) {
   await page.waitForURL('**/petugas/tugas');
 }
 
+/** Pilih alamat administratif lewat empat dropdown bertingkat.
+ *  Tiap tingkat baru terisi setelah induknya dipilih, jadi opsinya ditunggu
+ *  dulu — bukan di-`selectOption` langsung ke daftar yang masih kosong. */
+async function pilihWilayah(page: Page) {
+  const select = (tingkat: string) => page.locator(`select[name="wilayah-${tingkat}"]`);
+
+  for (const [tingkat, label] of [
+    ['provinsi', 'Daerah Istimewa Yogyakarta'],
+    ['kabupaten', 'Kabupaten Sleman'],
+    ['kecamatan', 'Gamping'],
+    ['desa', 'Balecatur'],
+  ] as const) {
+    const s = select(tingkat);
+    await expect(async () => {
+      expect(await s.locator('option').count()).toBeGreaterThan(1);
+    }).toPass();
+    await s.selectOption({ label });
+  }
+}
+
 async function isiForm(page: Page, opts: { nik: string; noKk: string; nama: string }) {
   await page.goto('/petugas/pendataan');
 
   await page.getByPlaceholder('Sesuai KTP').fill(opts.nama);
   await page.getByPlaceholder('99••••••••••••••').first().fill(opts.nik);
   await page.getByPlaceholder('99••••••••••••••').nth(1).fill(opts.noKk);
-  await page.getByPlaceholder('Jl. Contoh No. 1, RT/RW').fill('Jl. Uji Otomatis No. 7');
   await page.getByPlaceholder('2500000').fill('1800000');
+
+  await pilihWilayah(page);
+  await page.getByPlaceholder('RT 01 / RW 05').fill('RT 01 / RW 05, Jl. Uji Otomatis No. 7');
 
   // Satu anggota (kepala keluarga) — NIK-nya wajib sama dengan NIK kepala di atas.
   await page.getByPlaceholder('Nama anggota').fill(opts.nama);
