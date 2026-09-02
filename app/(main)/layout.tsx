@@ -15,11 +15,12 @@ export default async function MainLayout({ children }: { children: React.ReactNo
 
       <div className="lg:pl-72 xl:pl-80 flex flex-col min-h-dvh">
         <Topbar
-          role={isSuper ? "Super Administrator" : roleCookie}
+          role={roleCookie}
+          isSuper={isSuper}
           username={usernameCookie || "Guest"}
         />
 
-        <main className="container-app mx-auto w-full max-w-[1600px] px-4 sm:px-6 pt-5 pb-24 lg:pb-10 flex-1">
+        <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pt-5 pb-24 sm:px-6 lg:pb-10">
           {children}
         </main>
 
