@@ -1,13 +1,3 @@
-# ─────────────────────────────────────────────────────────────────────────────
-#  Compose khusus DEPLOY dari Jenkins untuk SIGAP-Bansos UI — bukan dev lokal.
-#
-#  Image `sigap-ui` sudah dibangun stage "Docker image" di Jenkinsfile (lengkap
-#  dengan NEXT_PUBLIC_API_URL yang sudah di-inline), jadi di sini TIDAK ada
-#  `build:` — cukup referensi tag lewat $IMAGE_TAG (fallback `latest`).
-#
-#  FE bicara ke API lewat IP publik (http://43.133.144.108:3001/v1) langsung dari
-#  browser, jadi container ini TIDAK perlu jaringan bersama dengan sigap-api.
-# ─────────────────────────────────────────────────────────────────────────────
 services:
   sigap-ui:
     image: sigap-ui:${IMAGE_TAG:-latest}
@@ -19,10 +9,6 @@ services:
     ports:
       - "3000:3000"
     healthcheck:
-      # Pakai `node` (pasti ada di image) alih-alih wget/curl, dan cek status
-      # code eksplisit. /health = route handler statis (app/health/route.ts),
-      # TIDAK menyentuh API backend — route "/" dihindari karena dia Server
-      # Component yang fetch ke backend saat render.
       test:
         - "CMD"
         - "node"
