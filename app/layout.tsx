@@ -42,7 +42,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "SIGAP-Bansos — Distribusi Bantuan Sosial Tepat Sasaran",
+  title: "SIGAP | Sistem Integrasi Gerakan Akuntabilitas Penyaluran",
   description:
     "Penentuan prioritas penerima bansos secara objektif dengan K-Means + TOPSIS, dan penyaluran dana yang diaudit publik lewat smart contract.",
 };
