@@ -27,7 +27,7 @@ export function Button({
     "disabled:opacity-40 disabled:pointer-events-none";
 
   const gaya = {
-    primary: "bg-[var(--color-ink)] text-white hover:bg-[#22342c]",
+    primary: "bg-[var(--color-primary)] text-white hover:bg-[#092f68]",
     ghost: "border border-[var(--color-line)] bg-transparent text-[var(--color-ink)] hover:bg-[var(--color-paper-2)]",
     quiet: "bg-transparent px-0 text-[var(--color-ink-2)] hover:text-[var(--color-ink)]",
   }[variant];

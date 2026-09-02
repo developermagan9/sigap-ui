@@ -72,7 +72,7 @@ export function DaftarPeriode({ daftar, aktifId }: { daftar: PeriodeProgram[]; a
                 <Link
                   href={`/admin/periode/${p.id}`}
                   className="flex items-center gap-1.5 rounded-full bg-ink px-3.5 py-1.5 text-[12px] text-white
-                    transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[#22342c]
+                    transition-all duration-500 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[var(--color-ink-2)]
                     active:scale-[0.97]"
                 >
                   Buka

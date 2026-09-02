@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { BrandMark } from "@/components/brand/BrandMark";
 
 const TAUTAN = [
   { href: "/", label: "Transparansi", ket: "Portal publik" },
@@ -31,20 +32,10 @@ export function FluidNav() {
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-30 border-b border-[var(--color-line)] bg-[rgba(247,245,239,0.9)] backdrop-blur-md">
+      <header className="fixed inset-x-0 top-0 z-30 border-b border-[var(--color-line)] bg-[rgba(248,250,252,0.9)] backdrop-blur-md">
         <div className="mx-auto flex max-w-[78rem] items-center justify-between gap-6 px-4 py-4 sm:px-8">
           <Link href="/" className="min-w-0">
-            <div className="flex items-center gap-3">
-              <span className="grid h-9 w-9 place-items-center border border-[var(--color-line)] bg-white text-[11px] font-semibold tracking-[0.18em] text-[var(--color-primary)]">
-                SGP
-              </span>
-              <div>
-                <p className="font-display text-xl">SIGAP-Bansos</p>
-                <p className="text-[11px] uppercase tracking-[0.16em] text-[var(--color-ink-3)]">
-                  Transparansi penyaluran
-                </p>
-              </div>
-            </div>
+            <BrandMark height={44} priority />
           </Link>
 
           <nav className="hidden items-center gap-2 lg:flex">
@@ -76,7 +67,7 @@ export function FluidNav() {
       </header>
 
       <div
-        className={`fixed inset-0 z-20 bg-[rgba(247,245,239,0.96)] px-4 pt-24 transition-opacity duration-200 lg:hidden ${
+        className={`fixed inset-0 z-20 bg-[rgba(248,250,252,0.96)] px-4 pt-24 transition-opacity duration-200 lg:hidden ${
           buka ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
       >

@@ -1,40 +1,62 @@
 @import "tailwindcss";
 
 @theme {
-  /* Original SIGAP Bansos / Minimalist-UI Colors */
-  --color-paper: #f7f5ef;
-  --color-paper-2: #f1ede3;
-  --color-paper-3: #e7e1d2;
-  --color-card: #fffdf8;
+  /* === SIGAP-Bansos — palet warna, lihat docs/DESIGN.md §2.1 === */
 
-  --color-ink: #1c2b24;
-  --color-ink-2: #314238;
-  --color-ink-3: #65736b;
-  --color-ink-4: #8b938e;
+  /* Brand */
+  --color-primary: #0b3b82; /* Deep Blue — institusional, header, CTA, on-chain */
+  --color-primary-light: #1479d1; /* Blue — link, hover/aktif, focus outline */
+  --color-primary-soft: #e7f0fb; /* latar badge/callout on-chain */
+  --color-secondary: #16a34a; /* Emerald — status positif / dana tersalur */
+  --color-accent: #84cc16; /* Lime — highlight prioritas/ranking (terbatas) */
 
-  --color-primary: #0f6b4c;
-  --color-primary-soft: #dcefe5;
-  --color-accent: #c98a2c;
-  --color-alert: #b3402a;
-  --color-line: #d8d3c4;
-  --color-chain: #2b3a67;
+  /* Permukaan & teks */
+  --color-bg: #f8fafc; /* Slate White — latar halaman */
+  --color-surface: #ffffff; /* White — kartu / panel */
+  --color-text: #0f172a; /* Navy — teks utama */
+  --color-text-muted: #64748b; /* Slate — teks sekunder */
+  --color-border: #e2e8f0; /* Light Slate — hairline / border */
 
-  /* Layout mapping variables for SIAKAD-style layout components */
-  --color-surface: var(--color-card);
-  --color-canvas: var(--color-paper);
-  --color-ink-muted: var(--color-ink-3);
+  /* Status */
+  --color-success: #22c55e;
+  --color-success-strong: #15803d; /* varian teks — kontras AA di atas surface */
+  --color-success-soft: #dcfce7;
+  --color-warning: #f59e0b;
+  --color-warning-strong: #b45309;
+  --color-warning-soft: #fef3c7;
+  --color-danger: #ef4444;
+  --color-danger-strong: #dc2626;
+  --color-danger-soft: #fee2e2;
 
-  /* Semantic Aliases */
-  --color-sage: #0f6b4c;
-  --color-sage-2: #0c573d;
-  --color-sage-soft: #dcefe5;
-  --color-clay: #b3402a;
-  --color-clay-soft: #f4e3de;
-  --color-gold: #c98a2c;
-  --color-c0: #8f432f;
-  --color-c1: #b77e2d;
-  --color-c2: #53735d;
-  --color-c3: #7a8686;
+  /* --- Alias kompatibilitas komponen lama --- */
+  --color-paper: var(--color-bg);
+  --color-paper-2: #f1f5f9;
+  --color-paper-3: #e2e8f0;
+  --color-card: var(--color-surface);
+  --color-canvas: var(--color-bg);
+  --color-ink-muted: var(--color-text-muted);
+
+  --color-ink: var(--color-text);
+  --color-ink-2: #1e293b;
+  --color-ink-3: var(--color-text-muted);
+  --color-ink-4: #94a3b8;
+
+  --color-line: var(--color-border);
+  --color-chain: var(--color-primary); /* elemen on-chain kini memakai biru brand */
+  --color-alert: var(--color-danger-strong);
+
+  --color-sage: var(--color-secondary);
+  --color-sage-2: #15803d;
+  --color-sage-soft: var(--color-success-soft);
+  --color-clay: var(--color-danger-strong);
+  --color-clay-soft: var(--color-danger-soft);
+  --color-gold: var(--color-warning-strong);
+
+  /* Palet kategorikal chart (breakdown kriteria TOPSIS dll.) */
+  --color-c0: #0b3b82;
+  --color-c1: #1479d1;
+  --color-c2: #16a34a;
+  --color-c3: #64748b;
 
   --font-display: var(--font-fraunces), "Iowan Old Style", "Palatino Linotype", serif;
   --font-sans: var(--font-jakarta), "Helvetica Neue", Arial, sans-serif;
@@ -45,10 +67,10 @@
 
 @layer base {
   :root {
-    --hairline: rgba(28, 43, 36, 0.1);
-    --hairline-strong: rgba(28, 43, 36, 0.16);
-    --lift-1: 0 2px 8px rgba(28, 43, 36, 0.04);
-    --lift-2: 0 8px 24px rgba(28, 43, 36, 0.05);
+    --hairline: rgba(15, 23, 42, 0.08);
+    --hairline-strong: rgba(15, 23, 42, 0.14);
+    --lift-1: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --lift-2: 0 8px 24px rgba(15, 23, 42, 0.08);
   }
 
   * {
@@ -64,10 +86,10 @@
   body {
     min-height: 100dvh;
     background:
-      radial-gradient(circle at top right, rgba(201, 138, 44, 0.05), transparent 26rem),
-      radial-gradient(circle at left 20%, rgba(15, 107, 76, 0.04), transparent 24rem),
-      var(--color-paper);
-    color: var(--color-ink);
+      radial-gradient(circle at top right, rgba(20, 121, 209, 0.06), transparent 26rem),
+      radial-gradient(circle at left 20%, rgba(22, 163, 74, 0.05), transparent 24rem),
+      var(--color-bg);
+    color: var(--color-text);
     font-family: var(--font-sans);
     line-height: 1.6;
   }
@@ -78,7 +100,7 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-chain);
+    outline: 2px solid var(--color-primary-light);
     outline-offset: 2px;
   }
 
@@ -125,7 +147,7 @@
   .panel {
     border: 1px solid var(--color-line);
     border-radius: 12px;
-    background: rgba(255, 253, 248, 0.82);
+    background: rgba(255, 255, 255, 0.82);
     backdrop-filter: blur(8px);
   }
 

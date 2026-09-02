@@ -25,7 +25,7 @@ export function Topbar({
   const now = useJamSekarang();
 
   return (
-    <header className="sticky top-0 z-20 border-b border-[var(--color-line)] bg-[rgba(247,245,239,0.95)] backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-[var(--color-line)] bg-[rgba(248,250,252,0.95)] backdrop-blur">
       <div className="flex h-14 items-center gap-3 px-4 sm:px-6">
         <button
           className="rounded-md p-2 text-[var(--color-ink-3)] hover:bg-white border border-transparent hover:border-[var(--color-line)] lg:hidden"

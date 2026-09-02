@@ -124,9 +124,9 @@ export function RiwayatList({ items }: { items: RumahTanggaRow[] }) {
 
   const tone = (status: string) =>
     status === "verified"
-      ? "bg-[var(--color-primary-soft)] text-[var(--color-primary)]"
+      ? "bg-[var(--color-success-soft)] text-[var(--color-success-strong)]"
       : status === "flagged"
-        ? "bg-[#fbf3db] text-[#956400]"
+        ? "bg-[var(--color-warning-soft)] text-[var(--color-warning-strong)]"
         : "bg-[var(--color-paper-2)] text-[var(--color-ink-2)]";
 
   if (entries.length === 0) {

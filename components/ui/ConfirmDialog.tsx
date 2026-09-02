@@ -51,8 +51,8 @@ export function ConfirmDialog({
             disabled={loading}
             className={`flex items-center justify-center gap-2 rounded-[6px] px-4 py-2.5 text-sm font-medium text-white transition-colors disabled:opacity-60 ${
               tone === "danger"
-                ? "bg-[var(--color-alert)] hover:bg-[#962f1f]"
-                : "bg-[var(--color-ink)] hover:bg-[#22342c]"
+                ? "bg-[var(--color-danger-strong)] hover:bg-[#b91c1c]"
+                : "bg-[var(--color-ink)] hover:bg-[var(--color-ink-2)]"
             }`}
           >
             {loading && <Loader size="sm" />}

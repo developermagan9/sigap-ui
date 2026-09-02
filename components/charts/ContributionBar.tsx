@@ -2,7 +2,7 @@
 
 import { persen } from "@/lib/format";
 
-const WARNA = ["#8c3b2e", "#a8813c", "#4c6b52", "#7c8794"];
+const WARNA = ["#0b3b82", "#1479d1", "#16a34a", "#64748b"];
 
 type Item = { key: string; label: string; kontribusi: number; kesenjangan: number; nilaiTampil: string };
 
