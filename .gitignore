@@ -5,3 +5,9 @@ node_modules/
 *.log
 /playwright-report/
 /test-results/
+
+# Cache incremental TypeScript — isinya path absolut + timestamp mesin lokal,
+# jadi tiap `tsc` menulis ulang seluruh file. Selama ini ter-track, dan karena
+# selalu berubah di dua sisi ia konflik di tiap merge (padahal isinya tidak
+# pernah perlu di-review). Regenerate sendiri saat build.
+*.tsbuildinfo
