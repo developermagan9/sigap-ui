@@ -26,7 +26,6 @@ export const Info = (p: P) => <S {...p}><circle cx="12" cy="12" r="8.5" /><path 
 export const Alert = (p: P) => <S {...p}><path d="M12 4.5 3 19.5h18L12 4.5Z" /><path d="M12 10v4M12 17h.01" /></S>;
 export const Link = (p: P) => <S {...p}><path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.54 3.54 0 0 0-5-5l-1.5 1.5" /><path d="M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.54 3.54 0 0 0 5 5l1.5-1.5" /></S>;
 export const Cube = (p: P) => <S {...p}><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" /><path d="M4 7.5 12 12l8-4.5M12 12v9" /></S>;
-export const Sparkline = (p: P) => <S {...p}><path d="M3.5 15.5 8 10l3.5 3.5L20 5" /><path d="M3.5 20h17" /></S>;
 export const Doc = (p: P) => <S {...p}><path d="M14 3.5H7.5A1.5 1.5 0 0 0 6 5v14a1.5 1.5 0 0 0 1.5 1.5h9A1.5 1.5 0 0 0 18 19V7.5L14 3.5Z" /><path d="M13.8 3.7V8h4.1" /></S>;
 export const Filter = (p: P) => <S {...p}><path d="M4 6.5h16M7 12h10M10 17.5h4" /></S>;
 export const Eye = (p: P) => <S {...p}><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></S>;

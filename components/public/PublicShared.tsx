@@ -38,31 +38,6 @@ export const METODOLOGI = [
   },
 ] as const;
 
-export function PublicSubnav({ programId }: { programId?: string }) {
-  const items = [
-    { href: "/", label: "Beranda" },
-    ...(programId ? [{ href: `/program/${programId}`, label: "Detail Program" }] : []),
-    { href: "/pencairan", label: "Pencairan" },
-    { href: "/transaksi", label: "Jejak Transaksi" },
-    { href: "/metodologi", label: "Metodologi" },
-    { href: "/cek-status", label: "Cek Status" },
-  ];
-
-  return (
-    <div className="mx-auto flex max-w-[78rem] flex-wrap gap-2 px-4 pt-8 sm:px-8">
-      {items.map((item) => (
-        <a
-          key={item.href}
-          href={item.href}
-          className="border border-[var(--color-line)] bg-white px-3 py-2 text-[12px] uppercase tracking-[0.14em] text-[var(--color-ink-3)] transition-colors hover:bg-[var(--color-paper-2)] hover:text-[var(--color-ink)]"
-        >
-          {item.label}
-        </a>
-      ))}
-    </div>
-  );
-}
-
 export function PublicPageHero({
   eyebrow,
   title,
@@ -269,15 +244,6 @@ export function MetaRow({
       <dd className={mono ? "font-mono text-right text-[var(--color-ink)]" : "text-right text-[var(--color-ink)]"}>
         {value}
       </dd>
-    </div>
-  );
-}
-
-export function MetricMini({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-[11px] uppercase tracking-[0.14em] text-[var(--color-ink-4)]">{label}</p>
-      <p className="mt-1 font-mono text-[15px] text-[var(--color-ink)]">{value}</p>
     </div>
   );
 }
