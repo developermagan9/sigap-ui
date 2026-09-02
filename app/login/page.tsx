@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ArrowRight, Layers, Scale, Link as LinkIcon } from "@/components/ui/Icons";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { BrandMark } from "@/components/brand/BrandMark";
 import { ApiClient } from "@/lib/api";
 import { NAMA_JARINGAN } from "@/lib/constants";
 import { angka, persen, rupiahRingkas } from "@/lib/format";
@@ -50,14 +51,14 @@ export default async function LoginPage() {
   return (
     <div className="flex min-h-dvh flex-col lg:flex-row">
       {/* Left — editorial brand panel */}
-      <div className="relative hidden overflow-hidden bg-[var(--color-ink)] px-10 py-10 text-[#F7F5EF] lg:flex lg:w-[46%] lg:flex-col lg:justify-between xl:w-[42%] xl:px-16 xl:py-14">
+      <div className="relative hidden overflow-hidden bg-[var(--color-primary)] px-10 py-10 text-[#F8FAFC] lg:flex lg:w-[46%] lg:flex-col lg:justify-between xl:w-[42%] xl:px-16 xl:py-14">
         {/* Ambient texture */}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(247,245,239,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(247,245,239,0.05) 1px, transparent 1px)",
+              "linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px)",
             backgroundSize: "64px 64px",
             maskImage: "linear-gradient(to bottom, rgba(0,0,0,0.5), transparent 75%)",
           }}
@@ -65,23 +66,17 @@ export default async function LoginPage() {
         <div
           aria-hidden
           className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(201,138,44,0.16), transparent 70%)" }}
+          style={{ background: "radial-gradient(circle, rgba(132,204,22,0.12), transparent 70%)" }}
         />
         <div
           aria-hidden
           className="pointer-events-none absolute -bottom-32 -left-16 h-96 w-96 rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(15,107,76,0.22), transparent 70%)" }}
+          style={{ background: "radial-gradient(circle, rgba(20,121,209,0.30), transparent 70%)" }}
         />
 
         <div className="fade-in-up relative z-10">
-          <Link href="/" className="inline-flex items-center gap-3">
-            <span className="grid h-10 w-10 place-items-center rounded-md border border-white/15 bg-white/[0.06] text-[12px] font-bold text-[#e7c98a]">
-              SGP
-            </span>
-            <div>
-              <p className="font-display text-[15px] font-semibold tracking-wide">SIGAP Bansos</p>
-              <p className="text-[11px] uppercase tracking-widest text-[#F7F5EF]/55">Transparansi Distribusi</p>
-            </div>
+          <Link href="/" className="inline-flex rounded-xl bg-white px-5 py-3.5 shadow-sm">
+            <BrandMark height={46} priority />
           </Link>
         </div>
 
@@ -89,7 +84,7 @@ export default async function LoginPage() {
           <h1 className="font-display text-[2.1rem] leading-[1.08] tracking-[-0.02em] xl:text-[2.4rem]">
             Bantuan sosial yang penyalurannya bisa ditelusuri, bukan sekadar dijanjikan.
           </h1>
-          <p className="mt-4 text-[14px] leading-relaxed text-[#F7F5EF]/70">
+          <p className="mt-4 text-[14px] leading-relaxed text-[#F8FAFC]/70">
             Prioritas penerima dihitung objektif lewat K-Means dan TOPSIS, lalu setiap pencairan dana
             dicatat on-chain agar bisa diaudit publik kapan saja.
           </p>
@@ -103,10 +98,10 @@ export default async function LoginPage() {
                 }`}
                 style={{ ["--delay" as string]: `${160 + i * 80}ms` }}
               >
-                <step.icon className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#e7c98a]" strokeWidth={1.6} />
+                <step.icon className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#84CC16]" strokeWidth={1.6} />
                 <div>
-                  <p className="text-[13px] font-medium text-[#F7F5EF]">{step.title}</p>
-                  <p className="mt-0.5 text-[12.5px] leading-relaxed text-[#F7F5EF]/60">{step.desc}</p>
+                  <p className="text-[13px] font-medium text-[#F8FAFC]">{step.title}</p>
+                  <p className="mt-0.5 text-[12.5px] leading-relaxed text-[#F8FAFC]/60">{step.desc}</p>
                 </div>
               </div>
             ))}
@@ -117,9 +112,9 @@ export default async function LoginPage() {
           <div className="flex items-stretch divide-x divide-white/10 border-t border-white/10 pt-5">
             {STATS.map((s) => (
               <div key={s.label} className="flex-1 px-4 first:pl-0 last:pr-0">
-                <p className="text-[10.5px] uppercase tracking-[0.1em] text-[#F7F5EF]/45">{s.label}</p>
+                <p className="text-[10.5px] uppercase tracking-[0.1em] text-[#F8FAFC]/45">{s.label}</p>
                 <p className="tnum mt-1.5 truncate font-display text-[15px] tracking-[-0.01em]">{s.value}</p>
-                <p className="mt-0.5 text-[11px] text-[#F7F5EF]/50">{s.hint}</p>
+                <p className="mt-0.5 text-[11px] text-[#F8FAFC]/50">{s.hint}</p>
               </div>
             ))}
           </div>
@@ -131,11 +126,9 @@ export default async function LoginPage() {
         <div className="flex items-center justify-between lg:justify-end">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-[13px] font-medium text-ink-3 transition-colors hover:text-ink lg:hidden"
+            className="inline-flex lg:hidden"
           >
-            <span className="grid h-8 w-8 place-items-center rounded-md border border-[var(--color-line)] bg-white text-[10px] font-bold text-[var(--color-primary)]">
-              SGP
-            </span>
+            <BrandMark height={34} priority />
           </Link>
           <Link
             href="/"
