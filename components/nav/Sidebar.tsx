@@ -71,7 +71,7 @@ export function Sidebar({ initialRole, isSuper }: { initialRole: string; isSuper
 
   return (
     <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-[var(--color-line)] bg-[rgba(248,250,252,0.96)] backdrop-blur-md px-4 py-4 xl:w-80 lg:flex text-[var(--color-ink)]">
-      <div className="px-3 pb-6">
+      <div className="flex justify-center pb-6 pt-1">
         <BrandMark height={56} priority />
       </div>
 
