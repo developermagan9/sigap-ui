@@ -1,5 +1,4 @@
 import { Reveal } from "@/components/ui/Reveal";
-import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Check, Cube, Layers, Ledger, Scale, ShieldCheck, Users } from "@/components/ui/Icons";
 import { angka, persen, rupiah, rupiahRingkas, waktu } from "@/lib/format";
@@ -81,29 +80,6 @@ export function AdminStatsGrid({
               </div>
               <span className="text-[var(--color-ink-3)]">{item.icon}</span>
             </div>
-          </article>
-        </Reveal>
-      ))}
-    </div>
-  );
-}
-
-export function WorkflowCards() {
-  const items = [
-    { no: "01", title: "Verifikasi lapangan", body: "Data pending dan flagged diperiksa manusia lebih dulu." },
-    { no: "02", title: "Clustering kerentanan", body: "K-Means membentuk kelompok rentan sampai mampu." },
-    { no: "03", title: "Ranking TOPSIS", body: "Skor dan cutoff diuji sebelum menjadi daftar final." },
-    { no: "04", title: "Approval dan chain", body: "Merkle root dikunci setelah approval manusia." },
-  ];
-
-  return (
-    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-      {items.map((item, index) => (
-        <Reveal key={item.no} delay={index * 80}>
-          <article className="rule-card h-full p-6">
-            <p className="font-mono text-[11px] text-[var(--color-ink-4)]">{item.no}</p>
-            <h3 className="mt-6 text-[1.4rem]">{item.title}</h3>
-            <p className="mt-4 text-[13px] leading-6 text-[var(--color-ink-3)]">{item.body}</p>
           </article>
         </Reveal>
       ))}
@@ -326,41 +302,6 @@ export function AuditEntries({ entries }: { entries: AuditEntry[] }) {
             <span className="shrink-0 font-mono text-[12px] text-[var(--color-ink-3)]">
               {waktu(entry.createdAt)}
             </span>
-          </div>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-export function LoginRoleCards({
-  nextAdmin,
-  nextVerifikator,
-}: {
-  nextAdmin: string;
-  nextVerifikator: string;
-}) {
-  const items = [
-    {
-      title: "Admin",
-      body: "Mengatur bobot, menjalankan clustering dan ranking, lalu mengesahkan daftar final.",
-      href: `/auth/mock-login?role=admin&next=${encodeURIComponent(nextAdmin)}`,
-    },
-    {
-      title: "Verifikator",
-      body: "Meninjau data pending dan flagged sebelum rumah tangga ikut ranking.",
-      href: `/auth/mock-login?role=verifikator&next=${encodeURIComponent(nextVerifikator)}`,
-    },
-  ];
-
-  return (
-    <div className="grid gap-5 md:grid-cols-2">
-      {items.map((item) => (
-        <article key={item.title} className="rule-card p-6">
-          <h3 className="text-[1.5rem]">{item.title}</h3>
-          <p className="mt-4 text-[13px] leading-6 text-[var(--color-ink-3)]">{item.body}</p>
-          <div className="mt-6">
-            <Button href={item.href}>Masuk sebagai {item.title}</Button>
           </div>
         </article>
       ))}
