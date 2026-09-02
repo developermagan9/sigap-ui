@@ -38,8 +38,8 @@ ENV NODE_ENV=production \
 # `output: "standalone"` -> server minimal di root + aset statis terpisah.
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-# Project ini belum punya folder `public/`. Kalau nanti ditambah, aktifkan baris:
-# COPY --from=builder /app/public ./public
+# `output: standalone` TIDAK menyalin public/ otomatis — harus manual.
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 CMD ["node", "server.js"]
