@@ -1,22 +1,3 @@
-// ─────────────────────────────────────────────────────────────────────────────
-//  Pipeline CI/CD SIGAP-Bansos UI (Next.js)  —  paralel dengan sigap-api.
-// ─────────────────────────────────────────────────────────────────────────────
-//
-//  Tidak butuh plugin selain Docker CLI + compose v2 dan "Credentials Binding".
-//  FE tidak punya secret — semua konfigurasi runtime-nya publik (NEXT_PUBLIC_*),
-//  jadi tidak ada blok withCredentials di sini.
-//
-//  Alur:
-//    Metadata     → hitung tag image dari commit + nomor build
-//    Quality      → npm ci + typecheck (di dalam container node:20-alpine)
-//    Docker image → build image standalone; NEXT_PUBLIC_* di-inline via build-arg
-//    Deploy       → docker compose up -d   (branch main / develop)
-//    Smoke test   → tunggu container sehat (healthcheck route "/")
-//
-//  PENTING: NEXT_PUBLIC_API_URL di-bake saat build. Kalau URL API berubah,
-//  jalankan ulang pipeline ini — rebuild image, bukan sekadar restart.
-// ─────────────────────────────────────────────────────────────────────────────
-
 pipeline {
   agent any
 
@@ -32,8 +13,6 @@ pipeline {
     COMPOSE_FILE              = 'docker-compose.deploy.yml'
     NODE_IMAGE                = 'node:20-alpine'
 
-    // ── Konfigurasi FE (di-inline ke bundle saat build) ──
-    // Ganti IP/host di sini kalau API pindah.
     NEXT_PUBLIC_API_URL       = 'http://43.133.144.108:3001/v1'
     NEXT_PUBLIC_EXPLORER_BASE = 'https://amoy.polygonscan.com'
     NEXT_PUBLIC_CHAIN_NAME    = 'Polygon Amoy'
@@ -56,10 +35,6 @@ pipeline {
 
     stage('Quality') {
       steps {
-        // Node jalan di container sekali `docker run`. `-u <uid>:<gid>` supaya
-        // node_modules hasilnya dimiliki user jenkins (cleanWs tidak error).
-        // `next build` juga meng-typecheck, tapi stage terpisah ini memberi
-        // sinyal gagal lebih cepat sebelum build image yang lebih berat.
         sh '''
           docker run --rm \
             -v "$WORKSPACE":/app -w /app \

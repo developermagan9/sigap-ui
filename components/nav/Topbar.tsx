@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { ClientIcon } from "./ClientIcon";
-import type { PeriodeOpsi } from "./PeriodeSwitcher";
 
 function useJamSekarang() {
   const [now, setNow] = useState<Date | null>(null);
@@ -19,14 +18,9 @@ function useJamSekarang() {
 export function Topbar({
   role,
   username,
-  periode,
-  periodeAktifId,
 }: {
   role: string;
   username: string;
-  /** Daftar periode untuk pemilih di topbar. Kosong untuk pengunjung publik. */
-  periode?: PeriodeOpsi[];
-  periodeAktifId?: string;
 }) {
   const now = useJamSekarang();
 
