@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { ClientIcon } from "./ClientIcon";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { LogoutButton } from "./LogoutButton";
+import { BrandMark } from "@/components/brand/BrandMark";
 
 type Role = "admin" | "verifikator" | "petugas" | "auditor" | "public";
 
@@ -69,15 +70,9 @@ export function Sidebar({ initialRole, isSuper }: { initialRole: string; isSuper
     .sort((a, b) => b.length - a.length)[0];
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-[var(--color-line)] bg-[rgba(247,245,239,0.96)] backdrop-blur-md px-4 py-4 xl:w-80 lg:flex text-[var(--color-ink)]">
-      <div className="px-3 pb-6 flex items-center gap-3">
-        <span className="grid h-10 w-10 place-items-center rounded-md bg-white border border-[var(--color-line)] text-[12px] font-bold text-[var(--color-primary)]">
-          SGP
-        </span>
-        <div>
-          <p className="font-display text-[15px] font-semibold tracking-wide">SIGAP Bansos</p>
-          <p className="text-[11px] text-[var(--color-ink-3)] uppercase tracking-widest">{role === "public" ? "Transparansi" : "Internal"}</p>
-        </div>
+    <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r border-[var(--color-line)] bg-[rgba(248,250,252,0.96)] backdrop-blur-md px-4 py-4 xl:w-80 lg:flex text-[var(--color-ink)]">
+      <div className="px-3 pb-6">
+        <BrandMark height={56} priority />
       </div>
 
       <div className="flex-1 overflow-y-auto mt-2">

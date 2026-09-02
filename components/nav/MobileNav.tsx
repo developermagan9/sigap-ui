@@ -39,7 +39,7 @@ export function MobileNav({ initialRole }: { initialRole: string }) {
 
   return (
     <nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-[rgba(247,245,239,0.96)] pb-[env(safe-area-inset-bottom)] lg:hidden"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-line)] bg-[rgba(248,250,252,0.96)] pb-[env(safe-area-inset-bottom)] lg:hidden"
       aria-label="Navigasi bawah"
     >
       <div className={`grid grid-cols-${items.length}`}>

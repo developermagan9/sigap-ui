@@ -106,7 +106,7 @@ export function ImportCsv({ periodeId }: { periodeId: string }) {
         <div className="mt-6 border-t border-[var(--color-line)] pt-6">
           <p className="text-[13px] text-[var(--color-ink-2)]">
             {hasil.total_baris} baris dibaca · {hasil.total_rumah_tangga} rumah tangga ·{" "}
-            <span className="text-[var(--color-primary)]">{hasil.sukses} sukses</span> ·{" "}
+            <span className="text-[var(--color-success-strong)]">{hasil.sukses} sukses</span> ·{" "}
             <span className={hasil.gagal > 0 ? "text-[var(--color-alert)]" : ""}>{hasil.gagal} gagal</span>
           </p>
 
@@ -127,7 +127,7 @@ export function ImportCsv({ periodeId }: { periodeId: string }) {
                     <td className="py-2.5 pr-4 font-mono text-[12px]">{baris.baris.join(", ")}</td>
                     <td className="py-2.5 pr-4 font-mono text-[12px] text-[var(--color-ink-2)]">{baris.no_kk ?? "—"}</td>
                     <td className="py-2.5 pr-4 text-[12px]">
-                      <span className={baris.status === "success" ? "text-[var(--color-primary)]" : "text-[var(--color-alert)]"}>
+                      <span className={baris.status === "success" ? "text-[var(--color-success-strong)]" : "text-[var(--color-alert)]"}>
                         {baris.status === "success" ? "masuk" : "gagal"}
                       </span>
                     </td>
