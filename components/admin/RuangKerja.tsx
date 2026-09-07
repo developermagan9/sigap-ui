@@ -75,6 +75,7 @@ export function RuangKerja({
   const [sahError, setSahError] = useState<string | null>(null);
   const [terkunci, setTerkunci] = useState(terkunciAwal);
   const [halaman, setHalaman] = useState(1);
+  const [filterKelompok, setFilterKelompok] = useState<string | null>(null);
 
   const urutanAwal = useMemo(() => initialRanking.map((r) => r.rumah_tangga_id), [initialRanking]);
 
@@ -94,11 +95,21 @@ export function RuangKerja({
   const kuota = alokasiMeta?.kuotaPenerima ?? ranking.filter((r) => r.terpilih).length;
 
   const PER_HALAMAN = 10;
-  const totalHalaman = Math.max(1, Math.ceil(ranking.length / PER_HALAMAN));
+  const daftarKelompok = useMemo(
+    () => [...new Set(ranking.map((r) => r.cluster_label))].sort(),
+    [ranking]
+  );
+
+  const rankingTerfilter = useMemo(
+    () => filterKelompok ? ranking.filter((r) => r.cluster_label === filterKelompok) : ranking,
+    [ranking, filterKelompok],
+  );
+
+  const totalHalaman = Math.max(1, Math.ceil(rankingTerfilter.length / PER_HALAMAN));
   const halamanAktif = Math.min(halaman, totalHalaman);
   const barisTampil = useMemo(
-    () => ranking.slice((halamanAktif - 1) * PER_HALAMAN, halamanAktif * PER_HALAMAN),
-    [ranking, halamanAktif],
+    () => rankingTerfilter.slice((halamanAktif - 1) * PER_HALAMAN, halamanAktif * PER_HALAMAN),
+    [rankingTerfilter, halamanAktif]
   );
 
   const jalankanRanking = async () => {
@@ -260,9 +271,8 @@ export function RuangKerja({
                   ].map((s) => (
                     <div key={s.l} className="rounded-2xl bg-paper-2 p-5 ring-1 ring-[var(--hairline)]">
                       <p className="text-[10px] uppercase tracking-[0.14em] text-ink-4">{s.l}</p>
-                      <p className={`mt-2.5 font-display text-[1.6rem] leading-none tnum tracking-[-0.03em] ${
-                        s.tone === "clay" ? "text-clay" : ""
-                      }`}>
+                      <p className={`mt-2.5 font-display text-[1.6rem] leading-none tnum tracking-[-0.03em] ${s.tone === "clay" ? "text-clay" : ""
+                        }`}>
                         {s.v}
                       </p>
                       <p className="mt-2 text-[11px] leading-relaxed text-ink-3">{s.s}</p>
@@ -323,13 +333,32 @@ export function RuangKerja({
                     Klik baris untuk detail skor
                   </h3>
                 </div>
-                <p className="text-[12px] text-ink-3">
-                  {ranking.length > 0
-                    ? `Menampilkan ${angka((halamanAktif - 1) * PER_HALAMAN + 1)}–${angka(Math.min(halamanAktif * PER_HALAMAN, ranking.length))} dari ${angka(ranking.length)}`
-                    : "Belum ada data"}
-                </p>
+                <div className="flex flex-wrap items-end gap-3">
+                  <div>
+                    <label className="block text-[12px] text-ink-3 mb-1.5">Filter kelompok</label>
+                    <select
+                      value={filterKelompok ?? ""}
+                      onChange={(e) => {
+                        setFilterKelompok(e.target.value === "" ? null : e.target.value);
+                        setHalaman(1);
+                      }}
+                      className="rounded border border-[var(--color-line)] bg-paper-2 px-3 py-2 text-[13px] text-ink outline-none transition-colors focus:border-[var(--color-primary)]"
+                    >
+                      <option value="">Semua kelompok ({angka(ranking.length)})</option>
+                      {daftarKelompok.map((kelompok) => (
+                        <option key={kelompok} value={kelompok}>
+                          {kelompok} ({angka(ranking.filter((r) => r.cluster_label === kelompok).length)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="text-[12px] text-ink-3">
+                    {rankingTerfilter.length > 0
+                      ? `Menampilkan ${angka((halamanAktif - 1) * PER_HALAMAN + 1)}–${angka(Math.min(halamanAktif * PER_HALAMAN, rankingTerfilter.length))} dari ${angka(rankingTerfilter.length)}`
+                      : "Belum ada data"}
+                  </p>
+                </div>
               </div>
-
               {ranking.length === 0 ? (
                 <p className="mt-7 text-[13px] text-ink-3">
                   Belum ada ranking untuk periode ini — geser bobot lalu klik &ldquo;Jalankan ranking&rdquo;.
@@ -453,9 +482,8 @@ function Pagination({
               key={n}
               type="button"
               onClick={() => onGanti(n)}
-              className={`tnum h-8 min-w-8 rounded-md px-2 text-[12px] transition-colors ${
-                n === halaman ? "bg-[var(--color-ink)] text-white" : "text-ink-3 hover:bg-paper-2 hover:text-ink"
-              }`}
+              className={`tnum h-8 min-w-8 rounded-md px-2 text-[12px] transition-colors ${n === halaman ? "bg-[var(--color-ink)] text-white" : "text-ink-3 hover:bg-paper-2 hover:text-ink"
+                }`}
             >
               {n}
             </button>
