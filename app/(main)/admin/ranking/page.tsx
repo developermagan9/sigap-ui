@@ -27,7 +27,7 @@ export default async function HalamanRanking() {
           periodeId={periodeId}
           initialBobot={periode.bobotKriteria}
           initialRanking={ranking.results as any}
-          clusterIndexTarget={periode.clusterPrioritas}
+          clusterIndexTarget={periode.clusterResults?.map((c)=> c.clusterIndex)?? []}
           nominalDasar={periode.nominalDasar}
           terkunci={periode.status === "approved" || periode.status === "disbursed"}
         />
