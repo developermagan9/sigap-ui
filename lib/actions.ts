@@ -120,6 +120,13 @@ export async function submitOnchain(periodeId: string) {
   return result;
 }
 
+export async function danaiKontrak(periodeId: string) {
+  const token = await getToken();
+  const result = await ApiClient.blockchain.danaiKontrak(periodeId, token);
+  revalidatePath("/admin/on-chain");
+  return result;
+}
+
 /** Ganti periode program yang sedang dilihat (FE-5 / item O).
  *
  *  Disimpan di cookie, bukan query param, supaya kedelapan halaman admin/petugas
