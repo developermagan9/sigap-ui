@@ -120,6 +120,20 @@ export async function submitOnchain(periodeId: string) {
   return result;
 }
 
+export async function tambahWilayahPengguna(userId: string, wilayahId: string) {
+  const token = await getToken();
+  const result = await ApiClient.users.tambahWilayah(userId, wilayahId, token);
+  revalidatePath("/admin/pengguna");
+  return result;
+}
+
+export async function hapusWilayahPengguna(userId: string, wilayahId: string) {
+  const token = await getToken();
+  const result = await ApiClient.users.hapusWilayah(userId, wilayahId, token);
+  revalidatePath("/admin/pengguna");
+  return result;
+}
+
 export async function danaiKontrak(periodeId: string) {
   const token = await getToken();
   const result = await ApiClient.blockchain.danaiKontrak(periodeId, token);
