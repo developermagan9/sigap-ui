@@ -51,7 +51,8 @@ test.describe('RBAC rute', () => {
 
   test('switch-role menolak akun non-superuser', async ({ page }) => {
     await login(page, 'admin', 'password123');
-    await page.waitForURL(/\/admin\/periode\/[0-9a-f-]{36}/);
+    // Daftar periode, bukan dashboard satu periode — lihat catatan di login.spec.ts.
+    await page.waitForURL('**/admin/periode');
 
     // `page.request` (bukan fixture `request`) memakai konteks browser yang sama,
     // jadi cookie sesi admin ikut terkirim — fixture `request` punya jar sendiri.
