@@ -13,6 +13,12 @@ pipeline {
     COMPOSE_FILE              = 'docker-compose.deploy.yml'
     NODE_IMAGE                = 'node:20-alpine'
 
+    // Kunci nama project compose — lihat penjelasan panjang di
+    // sigap-api/Jenkinsfile. Ringkasnya: tanpa ini nama project ikut nama
+    // direktori workspace, sehingga path yang berubah melahirkan stack baru
+    // sementara stack lama tetap memegang portnya (3000 di sini).
+    COMPOSE_PROJECT_NAME      = 'sigap-ui'
+
     NEXT_PUBLIC_API_URL       = 'http://43.133.144.108:3001/v1'
     NEXT_PUBLIC_EXPLORER_BASE = 'https://amoy.polygonscan.com'
     NEXT_PUBLIC_CHAIN_NAME    = 'Polygon Amoy'
@@ -63,7 +69,20 @@ pipeline {
       steps {
         sh '''
           set -e
-          export IMAGE_TAG
+          export IMAGE_TAG COMPOSE_PROJECT_NAME
+
+          # Preflight port — lihat penjelasan di sigap-api/Jenkinsfile.
+          bentrok="$(docker ps --filter publish=3000 \
+            --format '{{.Names}}|{{.Label "com.docker.compose.project"}}' \
+            | awk -F'|' -v p="$COMPOSE_PROJECT_NAME" \
+                '$2 != p { print $1 " [project=" ($2 == "" ? "<non-compose>" : $2) "]" }')"
+          if [ -n "$bentrok" ]; then
+            echo "GAGAL - port 3000 sudah dipegang container lain:"
+            echo "  $bentrok"
+            echo "Hentikan dulu di server, mis:  docker rm -f <nama-container>"
+            exit 1
+          fi
+
           docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
 
           cid="$(docker compose -f "$COMPOSE_FILE" ps -q sigap-ui)"
