@@ -195,6 +195,7 @@ export type PublicTransaksi = {
  *  camelCase di komponen, itu membuat seluruh kartu hasil terisi `undefined`. */
 export type ClaimStatus = {
   reference: string;
+  periode_id: string;
   status: 'pending' | 'claimed' | 'failed';
   amount: number;
   wallet: string;
@@ -205,6 +206,25 @@ export type ClaimStatus = {
   claimed_at: string | null;
   program: string;
   leaf_hash: string;
+};
+
+/** Hasil `GET /periode-program/:id/claim-proof` (blockchain.service.ts getClaimProof()) —
+ *  argumen persis untuk `BansosDisbursement.claim()`. Endpoint ini publik: proof bukan
+ *  rahasia, isinya sudah terkunci di Merkle root. */
+export type ClaimProof = {
+  periode_id: string;
+  recipient: string;
+  amount: number;
+  nik_hash: string;
+  proof: string[];
+  sudah_diklaim: boolean;
+  /** Alamat BansosDisbursement. `null` = kontrak belum dideploy (mode simulasi). */
+  contract_address: string | null;
+  registry_address: string | null;
+  periode_id_onchain: number;
+  chain_id: number;
+  network: string;
+  jenis_wallet: 'mandiri' | 'custodial';
 };
 
 /** Ringkasan `GET /public/disbursement-summary`. */
@@ -279,6 +299,8 @@ export const ApiClient = {
     getDisbursementSummary: () => fetchApi<DisbursementSummary>('/public/disbursement-summary'),
     checkClaimStatus: (q: string) =>
       fetchApi<ClaimStatus>(`/public/claim-status?q=${encodeURIComponent(q)}`),
+    getClaimProof: (periodeId: string, wallet: string) =>
+      fetchApi<ClaimProof>(`/periode-program/${periodeId}/claim-proof?wallet=${encodeURIComponent(wallet)}`),
     getPrograms: async (): Promise<PublicProgram[]> =>
       (await fetchApi<{ programs: PublicProgram[] }>('/public/programs')).programs,
     getProgramDetail: (id: string) => fetchApi<PublicProgramDetail>(`/public/programs/${id}`),
@@ -411,6 +433,11 @@ export const ApiClient = {
   blockchain: {
     buildMerkle: (id: string, token?: string) => fetchApi(`/periode-program/${id}/build-merkle`, { method: 'POST', token }),
     submitOnchain: (id: string, token?: string) => fetchApi(`/periode-program/${id}/submit-onchain`, { method: 'POST', token }),
+    danaiKontrak: (id: string, token?: string) =>
+      fetchApi<{ sudah_cukup: boolean; deposit: number; saldo_kontrak: number; kebutuhan: number; tx_hash: string | null }>(
+        `/periode-program/${id}/danai-kontrak`,
+        { method: 'POST', token },
+      ),
     getStatus: (id: string, token?: string) =>
       fetchApi<{
         total_recipients: number;
@@ -418,6 +445,8 @@ export const ApiClient = {
         total_pending: number;
         /** `null` selama periode masih mode simulasi — belum ada alamat kontrak nyata untuk ditautkan. */
         explorer_url: string | null;
+        /** Saldo kontrak vs Σ nominal penerima yang belum klaim. `null` = belum on-chain / RPC tidak terjangkau. */
+        dana_onchain: { saldo_kontrak: number; kebutuhan: number; cukup: boolean } | null;
       }>(
         `/periode-program/${id}/disbursement-status`,
         { token },

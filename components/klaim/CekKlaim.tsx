@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Bezel } from "@/components/ui/Bezel";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -9,6 +9,7 @@ import { Alert, Check, Coins, Search } from "@/components/ui/Icons";
 import { EXPLORER_BASE } from "@/lib/constants";
 import { rupiah, waktu } from "@/lib/format";
 import { ApiClient, type ClaimStatus } from "@/lib/api";
+import { KlaimOnchain } from "./KlaimOnchain";
 
 export function CekKlaim() {
   const [q, setQ] = useState("");
@@ -17,6 +18,8 @@ export function CekKlaim() {
   const [loading, setLoading] = useState(false);
   const [errorNotFound, setErrorNotFound] = useState(false);
   const [errorLain, setErrorLain] = useState<string | null>(null);
+
+  const setelahTercatat = useCallback((s: ClaimStatus) => setHasil(s), []);
 
   const jalankan = async (v: string) => {
     setQ(v);
@@ -144,29 +147,13 @@ export function CekKlaim() {
                         ))}
                       </dl>
 
-                      {/* Tombol klaim di sini dulunya palsu: `setTimeout(1400)` lalu
-                          mengumumkan "Simulasi berhasil. Rp X dikirim ke dompet di atas,
-                          event FundDisbursed tercatat publik." Tidak ada transaksi yang
-                          dikirim, tidak ada event yang tercatat, dan record tetap `pending`
-                          — persis "menyamarkan simulasi sebagai transaksi nyata" yang
-                          dilarang 07-Security-Privacy-Ethics.md §7, dan yang justru
-                          dinyatakan tidak dilakukan oleh 16-Konfigurasi-Kredensial.md §3.
-                          Penandatanganan klaim lewat wallet warga/relayer belum dibangun,
-                          jadi status ditampilkan apa adanya. */}
+                      {/* Dulu di sini ada tombol klaim palsu (`setTimeout(1400)` lalu
+                          "Simulasi berhasil…") — lihat 07-Security-Privacy-Ethics.md §7.
+                          KlaimOnchain mengirim transaksi sungguhan, dan status baru berubah
+                          setelah backend membaca event FundDisbursed dari chain. */}
                       {hasil.status === "pending" && (
                         <div className="mt-7 border-t border-[var(--hairline)] pt-6">
-                          <div className="flex items-start gap-3 rounded-2xl bg-paper-2 p-4 ring-1 ring-[var(--hairline)]">
-                            <span className="mt-px text-ink-3"><Coins className="h-4 w-4" /></span>
-                            <div>
-                              <p className="text-[12px] font-medium text-ink-2">Dana belum ditarik</p>
-                              <p className="mt-2 text-[12px] leading-[1.65] text-ink-3">
-                                Anda terdaftar sebagai penerima dan bukti Merkle Anda sudah terkunci
-                                pada root periode ini. Penarikan dilakukan lewat pendamping desa —
-                                penandatanganan klaim langsung dari dompet warga belum tersedia di
-                                portal ini.
-                              </p>
-                            </div>
-                          </div>
+                          <KlaimOnchain status={hasil} onTercatat={setelahTercatat} />
                         </div>
                       )}
                     </div>
