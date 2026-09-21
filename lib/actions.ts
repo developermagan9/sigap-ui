@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { ApiClient, type ImportCsvResult } from "./api";
+import { ApiClient, type ImportCsvResult, type RumahTanggaDetail, type SkemaAlokasi } from "./api";
 import { COOKIE_PERIODE } from "./periode";
 
 async function getToken(): Promise<string> {
@@ -18,6 +18,18 @@ async function getToken(): Promise<string> {
 function userIdFromToken(token: string): string {
   const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString("utf8"));
   return payload.sub;
+}
+
+/**
+ * Ambil identitas satu rumah tangga (nama, alamat, NIK, anggota keluarga).
+ *
+ * Dipanggil hanya saat pengguna benar-benar membuka satu berkas — tiap panggilan
+ * meninggalkan entri `LIHAT_PII` di audit log, jadi memuatnya untuk seluruh baris
+ * daftar akan membanjiri jejak audit dan membuka PII yang tidak ada yang minta.
+ */
+export async function getDetailRumahTangga(id: string): Promise<RumahTanggaDetail> {
+  const token = await getToken();
+  return ApiClient.rumahTangga.getDetail(id, token);
 }
 
 export async function verifyRumahTangga(id: string, status: "verified" | "rejected", catatan?: string) {
@@ -64,16 +76,17 @@ export async function runTopsisAndAlokasi(
   bobotKriteria: Record<string, number>,
   clusterIndexTarget: number[],
   nominalDasar: number,
+  skemaAlokasi: SkemaAlokasi = "flat",
 ) {
   const token = await getToken();
   await ApiClient.mining.runTopsis(periodeId, { clusterIndexTarget, bobotKriteria }, token);
-  // Skema alokasi selalu "flat": setiap keluarga yang lolos cutoff dapat
-  // nominal yang sama rata, tidak dibedakan per tingkat cluster (skema
-  // `berjenjang`/`proporsional` didukung backend tapi sengaja tidak dipilih
-  // dari UI ini). Biaya operasional selalu 0 — seluruh pagu disalurkan penuh.
+  // Ketiga skema di 05-Algorithm-Design.md §5.2 bisa dipilih dari UI. Sebelumnya
+  // nilai ini dipaku "flat" di sini, sehingga `berjenjang`/`proporsional` yang
+  // sudah dihitung & teruji di backend tidak pernah bisa dijangkau operator.
+  // Biaya operasional tetap 0 — seluruh pagu disalurkan penuh.
   const alokasi = await ApiClient.mining.runAlokasi(
     periodeId,
-    { skemaAlokasi: "flat", nominalDasar, biayaOperasional: 0 },
+    { skemaAlokasi, nominalDasar, biayaOperasional: 0 },
     token,
   );
   const ranking = await ApiClient.mining.getRanking(periodeId, token);

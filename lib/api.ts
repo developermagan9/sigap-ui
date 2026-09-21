@@ -36,6 +36,39 @@ export type RumahTanggaRow = {
   wilayah: { desa: string };
 };
 
+/** Skema pembagian nominal per penerima — 05-Algorithm-Design.md §5.2. */
+export type SkemaAlokasi = 'flat' | 'berjenjang' | 'proporsional';
+
+/** Satu anggota keluarga, sudah didekripsi backend. */
+export type AnggotaKeluarga = {
+  id: string;
+  nama: string;
+  nik: string;
+  hubungan: 'kepala' | 'istri_suami' | 'anak' | 'orang_tua' | 'famili_lain';
+  tanggal_lahir: string;
+  status_disabilitas: boolean;
+  is_tanggungan: boolean;
+};
+
+/**
+ * Detail satu rumah tangga dari `GET /rumah-tangga/:id` — satu-satunya tempat PII
+ * (nama, alamat, NIK, anggota keluarga) keluar dari backend. Setiap pemanggilan
+ * tercatat di audit log sebagai `LIHAT_PII`, jadi jangan panggil untuk memuat
+ * daftar: hanya saat pengguna benar-benar membuka satu berkas.
+ */
+export type RumahTanggaDetail = RumahTanggaRow & {
+  wilayahId: string;
+  periodeId: string | null;
+  identitas: {
+    nama_kepala_keluarga: string;
+    nik_kepala_keluarga: string;
+    no_kk: string;
+    alamat_detail: string;
+  } | null;
+  anggota: AnggotaKeluarga[];
+  wilayah: { desa: string; kecamatan: string; kabupaten: string; provinsi: string };
+};
+
 /** Bentuk `periode_program` dari backend, sudah dinormalisasi (lihat catatan Decimal di bawah). */
 export type PeriodeProgram = {
   id: string;
@@ -325,6 +358,11 @@ export const ApiClient = {
       const qs = params.toString();
       const res = await fetchApi<{ data: any[]; meta: any }>(`/rumah-tangga${qs ? `?${qs}` : ''}`, { token });
       return { data: res.data.map(normalizeRumahTangga), meta: res.meta };
+    },
+    /** Detail + PII terdekripsi. Tercatat `LIHAT_PII` di audit log tiap panggilan. */
+    getDetail: async (id: string, token?: string): Promise<RumahTanggaDetail> => {
+      const r = await fetchApi<any>(`/rumah-tangga/${id}`, { token });
+      return { ...normalizeRumahTangga(r), ...r } as RumahTanggaDetail;
     },
     create: (data: any, token?: string) => fetchApi('/rumah-tangga', { method: 'POST', body: JSON.stringify(data), token }),
     verify: (id: string, data: any, token?: string) => fetchApi(`/rumah-tangga/${id}/verifikasi`, { method: 'PATCH', body: JSON.stringify(data), token }),
