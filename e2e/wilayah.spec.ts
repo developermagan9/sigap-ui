@@ -89,7 +89,11 @@ test.describe('Wilayah bertingkat di form pendataan', () => {
     }).toPass();
 
     await desa.selectOption({ label: 'Balecatur' });
-    await expect(page.getByText('34.04.01.2001')).toBeVisible();
+    // Diikat ke label "Kode wilayah:" milik PilihWilayah, bukan `getByText` telanjang:
+    // panel bantuan ImportCsv di halaman yang sama memakai 34.04.01.2001 sebagai
+    // contoh isi kolom CSV, jadi kode itu muncul dua kali di DOM dan pencocokan
+    // polos melanggar strict mode Playwright.
+    await expect(page.getByText(/Kode wilayah:\s*34\.04\.01\.2001/)).toBeVisible();
   });
 
   test('pencarian desa menampilkan jalur lengkap tiap hasil', async ({ page }) => {

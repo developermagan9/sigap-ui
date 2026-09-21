@@ -1,12 +1,16 @@
 import { test, expect } from '@playwright/test';
 
-// Admin mendarat di dashboard periode yang sedang AKTIF, yang id-nya bergantung
-// pada isi database (pemilih periode, lihat lib/periode.ts) — jadi yang dicek
-// polanya, bukan satu UUID yang di-hardcode seperti sebelumnya.
-const POLA_DASHBOARD_ADMIN = /^\/admin\/periode\/[0-9a-f-]{36}$/;
-
+// Admin mendarat di DAFTAR periode `/admin/periode`.
+//
+// Test ini sebelumnya menanti `/admin/periode/<uuid>` — dashboard satu periode —
+// karena rute tanpa id dulu cuma alias yang langsung redirect ke periode aktif.
+// Commit 32e24fe (2026-09-01) mengubahnya jadi halaman daftar yang tidak lagi
+// redirect, dan sejak itu test ini gagal timeout 30 detik tanpa ada yang tahu:
+// suite Playwright tidak pernah dijalankan otomatis di mana pun (CI GitHub tidak
+// pernah ter-trigger — temuan #7 di docs/15; stage "Quality" Jenkins untuk UI
+// hanya `typecheck`, tanpa test).
 const CREDS = {
-  admin: { username: 'admin', password: 'password123', redirect: POLA_DASHBOARD_ADMIN },
+  admin: { username: 'admin', password: 'password123', redirect: '/admin/periode' },
   verifikator: { username: 'verifikator', password: 'password123', redirect: '/admin/verifikasi' },
   petugas: { username: 'petugas', password: 'password123', redirect: '/petugas/tugas' },
 };
@@ -22,14 +26,8 @@ test.describe('Login', () => {
   for (const [role, cred] of Object.entries(CREDS)) {
     test(`${role} logs in and lands on the correct page`, async ({ page }) => {
       await login(page, cred.username, cred.password);
-      const tujuan = cred.redirect;
-      if (tujuan instanceof RegExp) {
-        await page.waitForURL((url) => tujuan.test(new URL(url).pathname));
-        expect(new URL(page.url()).pathname).toMatch(tujuan);
-      } else {
-        await page.waitForURL(`**${tujuan}`);
-        expect(new URL(page.url()).pathname).toBe(tujuan);
-      }
+      await page.waitForURL(`**${cred.redirect}`);
+      expect(new URL(page.url()).pathname).toBe(cred.redirect);
 
       const cookies = await page.context().cookies();
       expect(cookies.find((c) => c.name === 'sigap_role')?.value).toBe(
@@ -60,7 +58,7 @@ test.describe('Login', () => {
 
   test('logout clears session and re-locks protected routes', async ({ page }) => {
     await login(page, 'admin', 'password123');
-    await page.waitForURL((url) => POLA_DASHBOARD_ADMIN.test(new URL(url).pathname));
+    await page.waitForURL('**/admin/periode');
 
     await page.goto('/api/auth/logout');
     await page.waitForURL('/');
