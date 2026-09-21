@@ -38,6 +38,7 @@ export const MENU_ITEMS: Record<Role, MenuItem[]> = {
     { href: "/admin/approval", label: "Review & Approval", icon: "ph:seal-check-duotone" },
     { href: "/admin/on-chain", label: "Penyaluran On-chain", icon: "ph:currency-circle-dollar-duotone" },
     { href: "/admin/audit-log", label: "Audit Log", icon: "ph:clock-counter-clockwise-duotone" },
+    { href: "/admin/pengguna", label: "Pengguna & Wilayah", icon: "ph:users-three-duotone" },
     { href: "/", label: "Portal Publik", icon: "ph:globe-hemisphere-west-duotone" },
   ],
   verifikator: [

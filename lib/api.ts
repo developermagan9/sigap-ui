@@ -96,6 +96,19 @@ export type PeriodeProgram = {
 
 /** Satu wilayah KERJA program dari `GET /wilayah`. `kode` null hanya untuk baris
  *  lama yang dibuat sebelum referensi Kepmendagri dipakai. */
+/** Satu baris `GET /users` (users.service.ts findAll()). */
+export type PenggunaRow = {
+  id: string;
+  username: string;
+  nama: string;
+  role: 'admin' | 'verifikator' | 'petugas' | 'auditor';
+  isActive: boolean;
+  /** Wilayah utama (`users.wilayah_id`). */
+  wilayah: Omit<WilayahRow, 'kode'> | null;
+  /** Wilayah akses tambahan (`user_wilayah`). Kewenangan efektif = utama + tambahan. */
+  wilayah_tambahan: Omit<WilayahRow, 'kode'>[];
+};
+
 export type WilayahRow = {
   id: string;
   kode: string | null;
@@ -317,6 +330,17 @@ export const ApiClient = {
         meta: { total: number; page: number; limit: number; totalPages: number };
       }>(`/public/transactions${q ? `?${q}` : ''}`);
     },
+  },
+  users: {
+    getAll: (token?: string) => fetchApi<PenggunaRow[]>('/users', { token }),
+    tambahWilayah: (userId: string, wilayahId: string, token?: string) =>
+      fetchApi<PenggunaRow>(`/users/${userId}/wilayah`, {
+        method: 'POST',
+        body: JSON.stringify({ wilayah_id: wilayahId }),
+        token,
+      }),
+    hapusWilayah: (userId: string, wilayahId: string, token?: string) =>
+      fetchApi<PenggunaRow>(`/users/${userId}/wilayah/${wilayahId}`, { method: 'DELETE', token }),
   },
   audit: {
     getAll: (page = 1, limit = 20, token?: string) =>
