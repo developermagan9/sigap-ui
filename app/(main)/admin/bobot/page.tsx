@@ -55,6 +55,8 @@ export default async function HalamanBobot() {
           initialRanking={ranking.results as any}
           clusterIndexTarget={periode.clusterPrioritas}
           nominalDasar={periode.nominalDasar}
+
+          skemaAlokasi={periode.skemaAlokasi as any}
           terkunci={periode.status === "approved" || periode.status === "disbursed"}
         />
       </section>

@@ -6,19 +6,18 @@ import { Field, inputCls } from "@/components/form/Field";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 import { Check } from "@/components/ui/Icons";
 import { updatePeriode } from "@/lib/actions";
+import type { SkemaAlokasi } from "@/lib/api";
 
 /**
- * Pengaturan alokasi dana — pagu dan nominal per keluarga.
+ * Pengaturan alokasi dana — pagu, nominal per keluarga, dan skema pembagian.
  *
- * Skema alokasi sengaja tidak bisa dipilih di sini: setiap keluarga yang lolos
- * cutoff selalu dapat nominal yang sama rata (skema `flat`, satu-satunya yang
- * dipakai sistem ini). Biaya operasional juga sengaja tidak ada — seluruh pagu
- * disalurkan penuh, dikirim sebagai 0.
+ * Biaya operasional sengaja tidak ada di sini — seluruh pagu disalurkan penuh,
+ * dikirim sebagai 0.
  *
  * Backend sudah punya `PATCH /periode-program/:id` untuk kolom-kolom ini
  * (lihat `updatePeriode` di lib/actions.ts), tapi hanya diterima selama
  * `status === 'draft'` — begitu clustering pertama kali dijalankan, pagu
- * terkunci dan nominal baru bisa diubah lagi lewat "Jalankan ranking &
+ * terkunci dan nominal/skema baru bisa diubah lagi lewat "Jalankan ranking &
  * alokasi" di panel simulasi (RuangKerja), bukan di sini. Komponen ini karena
  * itu hanya dirender halaman pemanggil saat draft.
  */
@@ -30,17 +29,22 @@ export function PengaturanAlokasi({
   awal: {
     anggaranTotal: number;
     nominalDasar: number;
+    skemaAlokasi: SkemaAlokasi;
   };
 }) {
   const router = useRouter();
   const [anggaran, setAnggaran] = useState(awal.anggaranTotal);
   const [nominalDasar, setNominalDasar] = useState(awal.nominalDasar);
+  const [skema, setSkema] = useState<SkemaAlokasi>(awal.skemaAlokasi);
   const [mengirim, setMengirim] = useState(false);
   const [galat, setGalat] = useState<string | null>(null);
   const [sukses, setSukses] = useState(false);
 
   const lengkap = anggaran > 0 && nominalDasar > 0;
-  const berubah = anggaran !== awal.anggaranTotal || nominalDasar !== awal.nominalDasar;
+  const berubah =
+    anggaran !== awal.anggaranTotal ||
+    nominalDasar !== awal.nominalDasar ||
+    skema !== awal.skemaAlokasi;
 
   const simpan = async () => {
     setMengirim(true);
@@ -51,7 +55,7 @@ export function PengaturanAlokasi({
         anggaran_total: anggaran,
         biaya_operasional: 0,
         nominal_dasar: nominalDasar,
-        skema_alokasi: "flat",
+        skema_alokasi: skema,
       });
       setSukses(true);
       router.refresh();
@@ -68,10 +72,10 @@ export function PengaturanAlokasi({
         Pengaturan alokasi dana
       </p>
       <p className="mt-3 max-w-2xl text-[12px] leading-[1.65] text-ink-3">
-        Seluruh pagu disalurkan, dibagi rata ke setiap keluarga yang lolos cutoff. Hanya bisa
-        diubah selama periode berstatus draft — begitu clustering pertama kali dijalankan, pagu
-        terkunci. Nominal per keluarga masih bisa disetel ulang lewat panel simulasi di bawah
-        selama periode belum disahkan.
+        Seluruh pagu disalurkan ke keluarga yang lolos cutoff. Hanya bisa diubah selama periode
+        berstatus draft — begitu clustering pertama kali dijalankan, pagu terkunci. Nominal dan
+        skema masih bisa disetel ulang lewat panel simulasi di bawah selama periode belum
+        disahkan.
       </p>
 
       <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -93,6 +97,18 @@ export function PengaturanAlokasi({
             value={nominalDasar}
             onChange={(e) => setNominalDasar(e.target.value === "" ? 0 : +e.target.value)}
           />
+        </Field>
+
+        <Field label="Skema pembagian">
+          <select
+            className={inputCls}
+            value={skema}
+            onChange={(e) => setSkema(e.target.value as SkemaAlokasi)}
+          >
+            <option value="flat">Flat — semua penerima dapat nominal sama</option>
+            <option value="berjenjang">Berjenjang — lebih besar untuk cluster lebih rentan</option>
+            <option value="proporsional">Proporsional — mengikuti skor TOPSIS</option>
+          </select>
         </Field>
       </div>
 
