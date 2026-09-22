@@ -53,6 +53,22 @@ async function cari(page: Page, q: string) {
 }
 
 test.describe('Klaim on-chain', () => {
+  test('tombol klaim aktif walau dompet baru tersuntik setelah halaman dimuat', async ({ page }) => {
+    test.skip(!MANDIRI, 'E2E_KLAIM_MANDIRI tidak diisi');
+    // Regression 2026-09-22: deteksi dompet hanya sekali saat mount, jadi MetaMask
+    // yang menyuntik window.ethereum sedikit terlambat membuat tombol mati permanen.
+    await page.addInitScript(() => {
+      setTimeout(() => {
+        (window as unknown as { ethereum: unknown }).ethereum = { request: async () => [] };
+        window.dispatchEvent(new Event('ethereum#initialized'));
+      }, 1500);
+    });
+    await cari(page, MANDIRI!);
+    const tombol = page.getByRole('button', { name: /klaim dengan dompet/i });
+    await expect(tombol).toBeVisible();
+    await expect(tombol).toBeEnabled({ timeout: 5000 });
+  });
+
   test('penerima custodial tidak diberi tombol klaim', async ({ page }) => {
     test.skip(!CUSTODIAL, 'E2E_KLAIM_CUSTODIAL tidak diisi');
     await pasangDompetShim(page, RPC!);
