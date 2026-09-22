@@ -39,9 +39,21 @@ export async function verifyRumahTangga(id: string, status: "verified" | "reject
   return result;
 }
 
+async function simpanPeriodeAktif(periodeId: string) {
+  (await cookies()).set(COOKIE_PERIODE, periodeId, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+}
+
 export async function createRumahTangga(data: Record<string, unknown>) {
   const token = await getToken();
   const result = await ApiClient.rumahTangga.create(data, token);
+  // Riwayat/Tugas memfilter periode aktif; tanpa ini data yang baru disimpan ke
+  // periode draft tidak muncul di riwayat bila periode aktifnya periode lain.
+  await simpanPeriodeAktif(String(data.periode_id));
   revalidatePath("/petugas/tugas");
   revalidatePath("/petugas/riwayat");
   return result;
@@ -149,13 +161,7 @@ export async function danaiKontrak(periodeId: string) {
  *  `revalidatePath("/", "layout")` membuang cache seluruh pohon rute sekaligus,
  *  jadi tidak ada halaman yang tertinggal menampilkan periode lama. */
 export async function pilihPeriode(periodeId: string) {
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_PERIODE, periodeId, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  await simpanPeriodeAktif(periodeId);
   revalidatePath("/", "layout");
 }
 
@@ -172,8 +178,7 @@ export async function createPeriode(data: {
   const periode = await ApiClient.periode.create(data, token);
   // Periode yang baru dibuat langsung jadi periode aktif — kalau tidak, admin
   // harus memilihnya manual dulu sebelum bisa mengisi data ke dalamnya.
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_PERIODE, periode.id, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+  await simpanPeriodeAktif(periode.id);
   revalidatePath("/", "layout");
   return periode;
 }
@@ -210,6 +215,7 @@ export async function importRumahTanggaCsv(formData: FormData): Promise<ImportCs
   }
   const periodeId = (formData.get("periode_id") as string | null) || undefined;
   const result = await ApiClient.rumahTangga.importCsv(file, periodeId, token);
+  if (periodeId && result.sukses > 0) await simpanPeriodeAktif(periodeId);
   revalidatePath("/petugas/tugas");
   revalidatePath("/petugas/riwayat");
   revalidatePath("/admin/verifikasi");
