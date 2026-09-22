@@ -271,6 +271,14 @@ function normalizePeriode(p: any): PeriodeProgram {
   };
 }
 
+/** Galat balasan API — `status` dipakai pemanggil untuk membedakan "tidak ada" (404) dari layanan mati. */
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 export async function fetchApi<T>(
   endpoint: string,
   options?: RequestInit & { token?: string }
@@ -299,9 +307,13 @@ export async function fetchApi<T>(
     try {
       errorData = await response.json();
     } catch {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
+      throw new ApiError(`API error: ${response.status} ${response.statusText}`, response.status);
     }
-    throw new Error(errorData?.error?.message || `API error: ${response.status}`);
+    throw new ApiError(
+      errorData?.error?.message || `API error: ${response.status}`,
+      response.status,
+      errorData?.error?.code,
+    );
   }
 
   return response.json();

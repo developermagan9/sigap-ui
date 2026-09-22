@@ -64,6 +64,30 @@ async function isiForm(page: Page, opts: { nik: string; noKk: string; nama: stri
   await page.getByRole('button', { name: /ya, simpan/i }).click();
 }
 
+/**
+ * Petugas hanya boleh mendata desa di wilayah kerjanya. Akses ke Balecatur (desa
+ * yang dipilih pilihWilayah) diberikan di sini lewat API admin, bukan diandalkan
+ * dari seed — wilayah akun demo bisa berubah lewat halaman Pengguna.
+ */
+test.beforeAll(async ({ request }) => {
+  const API = process.env.E2E_API_URL || 'http://localhost:3001/v1';
+  const login = await request.post(`${API}/auth/login`, { data: { username: 'admin', password: 'password123' } });
+  const auth = { Authorization: `Bearer ${(await login.json()).access_token}` };
+
+  const wilayah: { id: string; kode: string | null }[] = await (await request.get(`${API}/wilayah`, { headers: auth })).json();
+  const balecatur = wilayah.find((w) => w.kode === '34.04.01.2001');
+  expect(balecatur, 'wilayah Balecatur belum ada — jalankan npm run prisma:seed di sigap-api').toBeTruthy();
+
+  const users: { id: string; username: string; wilayah: { id: string } | null; wilayah_tambahan: { id: string }[] }[] =
+    await (await request.get(`${API}/users`, { headers: auth })).json();
+  const petugas = users.find((u) => u.username === 'petugas')!;
+  const punya = petugas.wilayah?.id === balecatur!.id || petugas.wilayah_tambahan.some((w) => w.id === balecatur!.id);
+  if (!punya) {
+    const res = await request.post(`${API}/users/${petugas.id}/wilayah`, { headers: auth, data: { wilayah_id: balecatur!.id } });
+    expect(res.ok(), await res.text()).toBeTruthy();
+  }
+});
+
 test.describe('Pendataan petugas', () => {
   test('menyimpan KK baru lalu muncul di riwayat', async ({ page }) => {
     const nik = nikUnik(1);

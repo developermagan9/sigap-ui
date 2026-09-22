@@ -8,7 +8,7 @@ import { Hash } from "@/components/ui/Hash";
 import { Alert, Check, Coins, Search } from "@/components/ui/Icons";
 import { EXPLORER_BASE } from "@/lib/constants";
 import { rupiah, waktu } from "@/lib/format";
-import { ApiClient, type ClaimStatus } from "@/lib/api";
+import { ApiClient, ApiError, type ClaimStatus } from "@/lib/api";
 import { KlaimOnchain } from "./KlaimOnchain";
 
 export function CekKlaim() {
@@ -18,23 +18,30 @@ export function CekKlaim() {
   const [loading, setLoading] = useState(false);
   const [errorNotFound, setErrorNotFound] = useState(false);
   const [errorLain, setErrorLain] = useState<string | null>(null);
+  const [kunciPrivat, setKunciPrivat] = useState(false);
 
   const setelahTercatat = useCallback((s: ClaimStatus) => setHasil(s), []);
 
   const jalankan = async (v: string) => {
     setQ(v);
     setCari(v);
-    setLoading(true);
     setErrorNotFound(false);
     setErrorLain(null);
     setHasil(null);
 
+    // 0x + 64 hex = private key, bukan alamat (0x + 40). Jangan pernah dikirim:
+    // query string tercatat di log server/proxy dan riwayat browser.
+    const privat = /^0x[0-9a-fA-F]{64}$/.test(v.trim());
+    setKunciPrivat(privat);
+    if (privat) return;
+
+    setLoading(true);
     try {
-      const res = await ApiClient.public.checkClaimStatus(v);
+      const res = await ApiClient.public.checkClaimStatus(v.trim());
       setHasil(res);
     } catch (e: unknown) {
       const pesan = e instanceof Error ? e.message : String(e);
-      if (pesan.includes("404")) {
+      if (e instanceof ApiError && e.status === 404) {
         setErrorNotFound(true);
       } else {
         // Gagal jaringan/5xx tidak boleh berakhir senyap di console — sebelumnya
@@ -79,6 +86,20 @@ export function CekKlaim() {
               </form>
 
               {/* ---------- Hasil ---------- */}
+              {cari && kunciPrivat && (
+                <div className="mt-8 flex items-start gap-3 rounded-2xl bg-clay-soft p-5 ring-1 ring-clay/40">
+                  <span className="mt-px text-clay"><Alert className="h-4 w-4" /></span>
+                  <div>
+                    <p className="text-[13px] font-medium">Itu private key, bukan alamat dompet</p>
+                    <p className="mt-2 text-[12px] leading-[1.65] text-ink-3">
+                      Pencarian tidak dikirim. Private key tidak boleh dibagikan ke siapa pun — siapa yang memegangnya
+                      menguasai dompet itu. Masukkan alamat dompet (0x + 40 karakter, terlihat di MetaMask di bawah nama
+                      akun) atau kode penerima REC-XXXX.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {cari && errorNotFound && !loading && (
                 <div className="mt-8 flex items-start gap-3 rounded-2xl bg-paper-2 p-5 ring-1 ring-[var(--hairline)]">
                   <span className="mt-px text-ink-3"><Alert className="h-4 w-4" /></span>
