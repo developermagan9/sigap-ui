@@ -51,6 +51,10 @@ async function isiForm(page: Page, opts: { nik: string; noKk: string; nama: stri
   await pilihWilayah(page);
   await page.getByPlaceholder('RT 01 / RW 05').fill('RT 01 / RW 05, Jl. Uji Otomatis No. 7');
 
+  // Wallet mandiri wajib sejak 2026-09-22 — tanpa ini tombol simpan menolak
+  // dengan toast "lengkapi seluruh kolom wajib" dan form tidak pernah terkirim.
+  await page.getByPlaceholder('0x1234...5678').fill('0x1234567890abcdef1234567890abcdef12345678');
+
   // Satu anggota (kepala keluarga) — NIK-nya wajib sama dengan NIK kepala di atas.
   await page.getByPlaceholder('Nama anggota').fill(opts.nama);
   await page.getByPlaceholder('NIK anggota').fill(opts.nik);

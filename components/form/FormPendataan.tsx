@@ -69,7 +69,9 @@ export function FormPendataan({
   const [rumah, setRumah] = useState(3);
   const [didik, setDidik] = useState(3);
   const [riwayat, setRiwayat] = useState(false);
-  const [jenisWallet, setJenisWallet] = useState<"belum" | "mandiri" | "custodial">("belum");
+  // Wallet mandiri wajib sejak 2026-09-22 (keputusan produk): dana ke wallet
+  // custodial placeholder (tanpa private key) terkunci selamanya, jadi opsi
+  // "custodial" dihapus dari form — lihat 15-Checklist-Belum-Terimplementasi.md.
   const [walletAddress, setWalletAddress] = useState("");
   const [anggota, setAnggota] = useState<Anggota[]>([
     { id: 1, nama: "", nik: "", hubungan: "kepala", lahir: "", disabilitas: false, tanggungan: false },
@@ -101,11 +103,11 @@ export function FormPendataan({
 
     if (pendapatan && +pendapatan < 0) g.pendapatan = "Pendapatan tidak boleh negatif.";
 
-    if (jenisWallet === "mandiri" && walletAddress && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress))
+    if (walletAddress && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress))
       g.wallet = "Alamat wallet harus format 0x + 40 karakter heksadesimal.";
 
     return g;
-  }, [nik, noKk, anggota, pendapatan, jenisWallet, walletAddress]);
+  }, [nik, noKk, anggota, pendapatan, walletAddress]);
 
   // Kolom turunan: dihitung sistem, tidak boleh diketik petugas
   const turunan = useMemo(() => {
@@ -131,7 +133,7 @@ export function FormPendataan({
     if (!wil.kode) k.push("Alamat administratif — provinsi sampai desa/kelurahan");
     if (!alamat.trim()) k.push("Alamat detail (RT/RW, nama jalan)");
     if (!pendapatan) k.push("Pendapatan rumah tangga");
-    if (jenisWallet === "mandiri" && !walletAddress.trim()) k.push("Alamat wallet penerima");
+    if (!walletAddress.trim()) k.push("Alamat wallet penerima");
 
     anggota.forEach((a, i) => {
       const kosong: string[] = [];
@@ -142,7 +144,7 @@ export function FormPendataan({
     });
 
     return k;
-  }, [namaKepala, nik, noKk, wil.kode, alamat, pendapatan, jenisWallet, walletAddress, anggota]);
+  }, [namaKepala, nik, noKk, wil.kode, alamat, pendapatan, walletAddress, anggota]);
 
   const bisaKirim = kurang.length === 0 && Object.keys(galat).length === 0;
 
@@ -183,8 +185,8 @@ export function FormPendataan({
         skor_akses_pendidikan: didik,
         riwayat_bansos_sebelumnya: riwayat,
         periode_id: periodeId,
-        ...(jenisWallet === "mandiri" ? { wallet_address: walletAddress, jenis_wallet: "mandiri" } : {}),
-        ...(jenisWallet === "custodial" ? { jenis_wallet: "custodial" } : {}),
+        wallet_address: walletAddress,
+        jenis_wallet: "mandiri",
         anggota: anggota.map((a) => ({
           nik: a.nik,
           nama: a.nama,
@@ -334,41 +336,28 @@ export function FormPendataan({
               <div className="mt-8 border-t border-[var(--hairline)] pt-7">
                 <Eyebrow>Wallet penerima</Eyebrow>
                 <p className="mt-3 max-w-md text-[12px] leading-relaxed text-ink-3">
-                  Dana disalurkan langsung ke alamat ini saat pencairan on-chain. Kalau keluarga belum
-                  punya wallet sendiri, pilih &ldquo;custodial&rdquo; — sistem akan menyediakan wallet
-                  yang dikelola pendamping desa atas nama mereka.
+                  Dana disalurkan langsung ke alamat ini saat pencairan on-chain. Wallet harus milik
+                  keluarga sendiri (mandiri) — bantu mereka membuatnya lewat MetaMask atau dompet
+                  kompatibel lain kalau belum punya, sebelum data ini disimpan.
                 </p>
                 <div className="mt-5 grid grid-cols-1 gap-5 sm:grid-cols-2">
-                  <Field label="Jenis wallet">
-                    <select
-                      value={jenisWallet}
-                      onChange={(e) => setJenisWallet(e.target.value as typeof jenisWallet)}
-                      className={inputCls}
-                    >
-                      <option value="belum">Belum ditentukan</option>
-                      <option value="mandiri">Mandiri — punya wallet sendiri</option>
-                      <option value="custodial">Custodial — dikelola pendamping desa</option>
-                    </select>
+                  <Field
+                    label="Alamat wallet"
+                    hint="0x + 40 karakter"
+                    wajib
+                    error={galat.wallet ?? wajibKosong(!walletAddress.trim())}
+                  >
+                    <input
+                      value={walletAddress}
+                      onChange={(e) => setWalletAddress(e.target.value.trim())}
+                      placeholder="0x1234...5678"
+                      className={
+                        galat.wallet ?? wajibKosong(!walletAddress.trim())
+                          ? `${inputErrCls} font-mono`
+                          : `${inputCls} font-mono`
+                      }
+                    />
                   </Field>
-                  {jenisWallet === "mandiri" && (
-                    <Field
-                      label="Alamat wallet"
-                      hint="0x + 40 karakter"
-                      wajib
-                      error={galat.wallet ?? wajibKosong(!walletAddress.trim())}
-                    >
-                      <input
-                        value={walletAddress}
-                        onChange={(e) => setWalletAddress(e.target.value.trim())}
-                        placeholder="0x1234...5678"
-                        className={
-                          galat.wallet ?? wajibKosong(!walletAddress.trim())
-                            ? `${inputErrCls} font-mono`
-                            : `${inputCls} font-mono`
-                        }
-                      />
-                    </Field>
-                  )}
                 </div>
               </div>
 
