@@ -50,8 +50,27 @@ export function KlaimOnchain({ status, onTercatat }: { status: ClaimStatus; onTe
   const [txHash, setTxHash] = useState<string | null>(null);
   const [adaDompet, setAdaDompet] = useState(false);
 
+  // Ekstensi dompet bisa menyuntik window.ethereum SETELAH halaman ter-hydrate;
+  // cek sekali saat mount membuat tombol mati permanen walau MetaMask terpasang.
   useEffect(() => {
-    setAdaDompet(dompetTersedia());
+    const cek = () => setAdaDompet(dompetTersedia());
+    cek();
+    window.addEventListener("ethereum#initialized", cek, { once: true });
+    const interval = setInterval(() => {
+      if (dompetTersedia()) {
+        cek();
+        clearInterval(interval);
+      }
+    }, 500);
+    const batas = setTimeout(() => clearInterval(interval), 5000);
+    return () => {
+      window.removeEventListener("ethereum#initialized", cek);
+      clearInterval(interval);
+      clearTimeout(batas);
+    };
+  }, []);
+
+  useEffect(() => {
     ApiClient.public
       .getClaimProof(status.periode_id, status.wallet)
       .then((p) => {
@@ -155,7 +174,10 @@ export function KlaimOnchain({ status, onTercatat }: { status: ClaimStatus; onTe
         Transaksi ditandatangani dari dompet browser di jaringan <span className="text-ink-2">{proof.network}</span>. Boleh
         dikirim oleh Anda sendiri atau pendamping desa — dana selalu masuk ke dompet tujuan di atas.
         {!adaDompet && (
-          <span className="mt-2 block text-ink-2">Dompet browser tidak terdeteksi. Pasang MetaMask atau buka halaman ini dari dompet in-app.</span>
+          <span className="mt-2 block text-ink-2">
+            Dompet browser tidak terdeteksi. Pastikan MetaMask terpasang di browser ini (bukan mode incognito) dan akses
+            situsnya diizinkan, lalu muat ulang halaman — atau buka halaman ini dari dompet in-app.
+          </span>
         )}
       </Kotak>
 
