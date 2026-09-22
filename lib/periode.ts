@@ -42,6 +42,19 @@ export async function getPeriodeAktif(token?: string): Promise<{
   return { id: daftar[0]?.id ?? PERIODE_AKTIF_ID, daftar };
 }
 
+/**
+ * Periode tujuan pendataan: periode aktif kalau masih `draft`, kalau tidak periode
+ * draft terbaru; `null` kalau tidak ada. Backend menolak input ke periode non-draft,
+ * dan petugas tidak punya pemilih periode — cookie basi (mis. ditinggal sesi admin
+ * di browser yang sama) tidak boleh menjebaknya di periode yang sudah dialokasikan.
+ */
+export async function getPeriodePendataan(token?: string): Promise<PeriodeProgram | null> {
+  const { id, daftar } = await getPeriodeAktif(token);
+  const aktif = daftar.find((p) => p.id === id);
+  if (aktif?.status === "draft") return aktif;
+  return daftar.find((p) => p.status === "draft") ?? null;
+}
+
 /** Versi ringkas untuk halaman yang cuma butuh id periodenya. */
 export async function getPeriodeAktifId(token?: string): Promise<string> {
   return (await getPeriodeAktif(token)).id;

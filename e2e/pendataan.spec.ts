@@ -80,6 +80,30 @@ test.describe('Pendataan petugas', () => {
     await expect(page.getByText(/menunggu|pending/i).first()).toBeVisible();
   });
 
+  test('cookie periode basi (periode non-draft) tidak menyasarkan input', async ({ page }) => {
+    // Kasus nyata 2026-09-22: cookie sigap_periode sisa sesi admin menunjuk periode
+    // berstatus alokasi, KK tersimpan di sana dan tidak muncul di mana pun.
+    await loginPetugas(page);
+    const token = (await page.context().cookies()).find((c) => c.name === 'sigap_token')!.value;
+    const API = process.env.E2E_API_URL || 'http://localhost:3001/v1';
+    const daftar = await (await page.request.get(`${API}/periode-program`, { headers: { Authorization: `Bearer ${token}` } })).json();
+    const periode: { id: string; status: string; namaProgram: string }[] = daftar.data ?? daftar;
+    const basi = periode.find((p) => p.status !== 'draft');
+    test.skip(!basi, 'tidak ada periode non-draft untuk dijadikan cookie basi');
+    const { hostname } = new URL(page.url());
+    await page.context().addCookies([{ name: 'sigap_periode', value: basi!.id, domain: hostname, path: '/' }]);
+
+    await page.goto('/petugas/pendataan');
+    const keterangan = page.locator('p', { hasText: 'Data masuk ke periode' });
+    await expect(keterangan).toBeVisible();
+    await expect(keterangan).not.toContainText(basi!.namaProgram);
+
+    const nik = nikUnik(3);
+    await isiForm(page, { nik, noKk: nik, nama: `Uji Cookie ${nik.slice(-6)}` });
+    await page.waitForURL('**/petugas/riwayat');
+    await expect(page.getByText(/menunggu|pending/i).first()).toBeVisible();
+  });
+
   test('menolak NIK kepala keluarga yang sudah terdaftar di periode ini', async ({ page }) => {
     const nik = nikUnik(2);
     const nama = `Uji Duplikat ${nik.slice(-6)}`;
