@@ -6,7 +6,7 @@ import { OnChainSummary, SummaryRow } from "@/components/admin/AdminShared";
 import { OnChainActions } from "@/components/admin/OnChainActions";
 import { ApiClient } from "@/lib/api";
 import { getPeriodeAktifId } from "@/lib/periode";
-import { rupiah } from "@/lib/format";
+import { rupiah, waktu } from "@/lib/format";
 
 export default async function HalamanOnChain() {
   const token = (await cookies()).get("sigap_token")?.value;
@@ -21,8 +21,11 @@ export default async function HalamanOnChain() {
     { label: "Merkle root dibangun", selesai: !!periode.merkleRoot },
     { label: "Transaksi on-chain disubmit", selesai: !!periode.txHash },
     { label: "Kontrak didanai", selesai: !!status.dana_onchain?.cukup, aktif: !!status.dana_onchain && !status.dana_onchain.cukup },
-    { label: "Klaim penerima berjalan", selesai: false, aktif: !!status.dana_onchain?.cukup },
+    { label: "Klaim penerima berjalan", selesai: status.klaim_ditutup, aktif: !!status.dana_onchain?.cukup && !status.klaim_ditutup },
+    { label: "Klaim ditutup & sisa dana ditarik", selesai: status.klaim_ditutup, aktif: !!status.batas_klaim && !status.klaim_ditutup },
   ];
+  // Registry beralamat nyata = periode diregistrasi sungguhan, bukan simulasi.
+  const onchain = !!periode.txHash && /^0x[0-9a-fA-F]{40}$/.test(periode.contractAddress ?? "");
 
   return (
     <main className="overflow-x-hidden pb-16 pt-8">
@@ -36,7 +39,11 @@ export default async function HalamanOnChain() {
               periodeId={periodeId}
               merkleRoot={periode.merkleRoot}
               txHash={periode.txHash}
+              onchain={onchain}
               danaOnchain={status.dana_onchain}
+              batasKlaim={status.batas_klaim}
+              klaimDitutup={status.klaim_ditutup}
+              totalPending={status.total_pending}
             />
           }
         />
@@ -48,6 +55,7 @@ export default async function HalamanOnChain() {
             totalRecipients={status.total_recipients}
             totalClaimed={status.total_claimed}
             totalPending={status.total_pending}
+            totalFailed={status.total_failed}
             nominalDasar={periode.nominalDasar}
           />
         </div>
@@ -97,6 +105,14 @@ export default async function HalamanOnChain() {
                   <dd>{periode.contractAddress ? <Hash value={periode.contractAddress} kepala={8} ekor={6} /> : <span className="text-[var(--color-ink-4)]">—</span>}</dd>
                 </div>
                 <SummaryRow label="Tx hash" value={periode.txHash ? `${periode.txHash.slice(0, 10)}...${periode.txHash.slice(-6)}` : "—"} mono />
+                <SummaryRow label="Batas klaim" value={status.batas_klaim ? waktu(status.batas_klaim) : "Belum ditetapkan"} />
+                {status.klaim_ditutup && (
+                  <SummaryRow
+                    label="Sisa dana ditarik"
+                    value={`${rupiah(status.sisa_dana_ditarik ?? 0)}${status.tx_tarik_sisa ? ` · ${status.tx_tarik_sisa.slice(0, 10)}…` : ""}`}
+                    mono
+                  />
+                )}
                 <SummaryRow
                   label="Saldo kontrak"
                   value={status.dana_onchain ? `${rupiah(status.dana_onchain.saldo_kontrak)} / ${rupiah(status.dana_onchain.kebutuhan)}` : "—"}

@@ -88,6 +88,8 @@ export type PeriodeProgram = {
   merkleRoot: string | null;
   contractAddress: string | null;
   txHash: string | null;
+  batasKlaim?: string | null;
+  klaimDitutupAt?: string | null;
   status: string;
   silhouetteScore: number | null;
   createdAt: string;
@@ -103,6 +105,7 @@ export type PenggunaRow = {
   nama: string;
   role: 'admin' | 'verifikator' | 'petugas' | 'auditor';
   isActive: boolean;
+  lastLoginAt: string | null;
   /** Wilayah utama (`users.wilayah_id`). */
   wilayah: Omit<WilayahRow, 'kode'> | null;
   /** Wilayah akses tambahan (`user_wilayah`). Kewenangan efektif = utama + tambahan. */
@@ -238,16 +241,49 @@ export type ClaimProof = {
   chain_id: number;
   network: string;
   jenis_wallet: 'mandiri' | 'custodial';
+  /** Status record ini; `failed` = tidak diklaim sampai batas waktu. */
+  status?: 'pending' | 'claimed' | 'failed';
+  /** Batas waktu klaim on-chain (ISO), `null` = belum ditetapkan. */
+  batas_klaim?: string | null;
+  /** Masa klaim sudah lewat atau sisa dana sudah ditarik — `claim()` pasti revert. */
+  klaim_ditutup?: boolean;
 };
 
-/** Ringkasan `GET /public/disbursement-summary`. */
-export type DisbursementSummary = {
-  program: string | null;
-  total_anggaran: number;
-  total_tersalur: number;
-  jumlah_penerima: number;
-  per_wilayah: { desa: string; jumlah_penerima: number; total_dana: number; total_cair: number }[];
-  transaksi_terbaru: { tx_hash: string; amount: number; timestamp: string; recipient_ref: string }[];
+/** Satu notifikasi (`GET /notifikasi`, `GET /notifikasi/outbox-sms`). */
+export type NotifikasiRow = {
+  id: string;
+  kanal: 'in_app' | 'sms_mock';
+  userId: string | null;
+  tujuan: string | null;
+  judul: string;
+  pesan: string;
+  entityType: string | null;
+  entityId: string | null;
+  dibacaAt: string | null;
+  createdAt: string;
+};
+
+/** Status penyaluran on-chain (`GET /periode-program/:id/disbursement-status`). */
+export type DisbursementStatus = {
+  total_recipients: number;
+  total_claimed: number;
+  /** Tidak diklaim sampai batas waktu (ditandai saat sisa dana ditarik). */
+  total_failed: number;
+  total_pending: number;
+  /** `null` selama periode masih mode simulasi — belum ada alamat kontrak nyata untuk ditautkan. */
+  explorer_url: string | null;
+  /** Saldo kontrak vs Σ nominal penerima yang belum klaim. `null` = belum on-chain / RPC tidak terjangkau. */
+  dana_onchain: { saldo_kontrak: number; kebutuhan: number; cukup: boolean } | null;
+  batas_klaim: string | null;
+  klaim_ditutup: boolean;
+  sisa_dana_ditarik: number | null;
+  tx_tarik_sisa: string | null;
+};
+
+/** Hasil `GET /periode-program/:id/clustering-result`. */
+export type ClusteringResult = {
+  silhouette_score: number | null;
+  clusters: { id: string; clusterIndex: number; label: string; centroid: Record<string, number>; jumlahAnggota: number }[];
 };
 
 /** Prisma `Decimal` serialize jadi STRING di JSON (bukan number) — dikonfirmasi lewat panggilan
@@ -321,7 +357,6 @@ export async function fetchApi<T>(
 
 export const ApiClient = {
   public: {
-    getDisbursementSummary: () => fetchApi<DisbursementSummary>('/public/disbursement-summary'),
     checkClaimStatus: (q: string) =>
       fetchApi<ClaimStatus>(`/public/claim-status?q=${encodeURIComponent(q)}`),
     getClaimProof: (periodeId: string, wallet: string) =>
@@ -353,6 +388,40 @@ export const ApiClient = {
       }),
     hapusWilayah: (userId: string, wilayahId: string, token?: string) =>
       fetchApi<PenggunaRow>(`/users/${userId}/wilayah/${wilayahId}`, { method: 'DELETE', token }),
+    create: (
+      data: { username: string; nama: string; role: PenggunaRow['role']; password: string; wilayah_id?: string },
+      token?: string,
+    ) => fetchApi<PenggunaRow>('/users', { method: 'POST', body: JSON.stringify(data), token }),
+    update: (
+      userId: string,
+      data: { nama?: string; role?: PenggunaRow['role']; wilayah_id?: string | null; is_active?: boolean },
+      token?: string,
+    ) => fetchApi<PenggunaRow>(`/users/${userId}`, { method: 'PATCH', body: JSON.stringify(data), token }),
+    resetPassword: (userId: string, passwordBaru: string, token?: string) =>
+      fetchApi<{ success: boolean }>(`/users/${userId}/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({ password_baru: passwordBaru }),
+        token,
+      }),
+  },
+  notifikasi: {
+    milikSaya: (opts: { belumDibaca?: boolean; page?: number; limit?: number } = {}, token?: string) => {
+      const q = new URLSearchParams();
+      if (opts.belumDibaca) q.set('belum_dibaca', 'true');
+      if (opts.page) q.set('page', String(opts.page));
+      if (opts.limit) q.set('limit', String(opts.limit));
+      return fetchApi<{ data: NotifikasiRow[]; total: number; belum_dibaca: number; page: number; limit: number }>(
+        `/notifikasi${q.size ? `?${q}` : ''}`,
+        { token },
+      );
+    },
+    outboxSms: (page = 1, limit = 20, token?: string) =>
+      fetchApi<{ data: NotifikasiRow[]; total: number; page: number; limit: number }>(
+        `/notifikasi/outbox-sms?page=${page}&limit=${limit}`,
+        { token },
+      ),
+    tandaiDibaca: (id: string, token?: string) => fetchApi(`/notifikasi/${id}/dibaca`, { method: 'PATCH', token }),
+    tandaiSemuaDibaca: (token?: string) => fetchApi<{ ditandai: number }>('/notifikasi/dibaca-semua', { method: 'POST', token }),
   },
   audit: {
     getAll: (page = 1, limit = 20, token?: string) =>
@@ -363,6 +432,9 @@ export const ApiClient = {
   },
   auth: {
     login: (data: any) => fetchApi('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+    logout: (token?: string) => fetchApi('/auth/logout', { method: 'POST', token }),
+    gantiPassword: (data: { password_lama: string; password_baru: string }, token?: string) =>
+      fetchApi('/auth/ganti-password', { method: 'POST', body: JSON.stringify(data), token }),
   },
   periode: {
     getAll: async (token?: string): Promise<PeriodeProgram[]> =>
@@ -401,6 +473,7 @@ export const ApiClient = {
       normalizePeriode(await fetchApi<any>('/periode-program', { method: 'POST', body: JSON.stringify(data), token })),
     update: async (id: string, data: Record<string, unknown>, token?: string): Promise<PeriodeProgram> =>
       normalizePeriode(await fetchApi<any>(`/periode-program/${id}`, { method: 'PATCH', body: JSON.stringify(data), token })),
+    remove: (id: string, token?: string) => fetchApi<{ id: string; dihapus: boolean }>(`/periode-program/${id}`, { method: 'DELETE', token }),
   },
   rumahTangga: {
     getAll: async (
@@ -460,11 +533,13 @@ export const ApiClient = {
   mining: {
     runClustering: (id: string, data: any, token?: string) => fetchApi(`/periode-program/${id}/run-clustering`, { method: 'POST', body: JSON.stringify(data), token }),
     getClustering: (id: string, token?: string) =>
-      fetchApi<{ clusters: any[]; silhouette_score: number | null }>(`/periode-program/${id}/clustering-result`, { token }),
+      fetchApi<ClusteringResult>(`/periode-program/${id}/clustering-result`, { token }),
     runTopsis: (id: string, data: any, token?: string) => fetchApi(`/periode-program/${id}/run-topsis`, { method: 'POST', body: JSON.stringify(data), token }),
     getRanking: (id: string, token?: string) => fetchApi<{ results: any[] }>(`/periode-program/${id}/ranking-result`, { token }),
     runAlokasi: (id: string, data: any, token?: string) => fetchApi(`/periode-program/${id}/run-alokasi`, { method: 'POST', body: JSON.stringify(data), token }),
     finalizeRanking: (id: string, data: any, token?: string) => fetchApi(`/periode-program/${id}/finalize-ranking`, { method: 'POST', body: JSON.stringify(data), token }),
+    batalkanApproval: (id: string, alasan: string, token?: string) =>
+      fetchApi(`/periode-program/${id}/batalkan-approval`, { method: 'POST', body: JSON.stringify({ alasan }), token }),
   },
   blockchain: {
     buildMerkle: (id: string, token?: string) => fetchApi(`/periode-program/${id}/build-merkle`, { method: 'POST', token }),
@@ -474,18 +549,23 @@ export const ApiClient = {
         `/periode-program/${id}/danai-kontrak`,
         { method: 'POST', token },
       ),
-    getStatus: (id: string, token?: string) =>
-      fetchApi<{
-        total_recipients: number;
-        total_claimed: number;
-        total_pending: number;
-        /** `null` selama periode masih mode simulasi — belum ada alamat kontrak nyata untuk ditautkan. */
-        explorer_url: string | null;
-        /** Saldo kontrak vs Σ nominal penerima yang belum klaim. `null` = belum on-chain / RPC tidak terjangkau. */
-        dana_onchain: { saldo_kontrak: number; kebutuhan: number; cukup: boolean } | null;
-      }>(
-        `/periode-program/${id}/disbursement-status`,
-        { token },
+    syncKlaim: (id: string, token?: string) =>
+      fetchApi<{ klaim_baru: number; total_claimed: number; dipindai_sampai_blok: number }>(
+        `/periode-program/${id}/sync-klaim`,
+        { method: 'POST', token },
       ),
+    setBatasKlaim: (id: string, batasKlaim: string, token?: string) =>
+      fetchApi<{ batas_klaim: string; tx_hash: string }>(`/periode-program/${id}/batas-klaim`, {
+        method: 'POST',
+        body: JSON.stringify({ batas_klaim: batasKlaim }),
+        token,
+      }),
+    tarikSisa: (id: string, tujuan: string | undefined, token?: string) =>
+      fetchApi<{ tx_hash: string | null; jumlah_ditarik: number; tujuan: string; record_tidak_diklaim: number }>(
+        `/periode-program/${id}/tarik-sisa`,
+        { method: 'POST', body: JSON.stringify(tujuan ? { tujuan } : {}), token },
+      ),
+    getStatus: (id: string, token?: string) =>
+      fetchApi<DisbursementStatus>(`/periode-program/${id}/disbursement-status`, { token }),
   },
 };

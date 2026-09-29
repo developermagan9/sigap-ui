@@ -168,17 +168,20 @@ export function OnChainSummary({
   totalRecipients,
   totalClaimed,
   totalPending,
+  totalFailed = 0,
   nominalDasar,
 }: {
   totalRecipients: number;
   totalClaimed: number;
   totalPending: number;
+  /** Tidak diklaim sampai batas waktu (sisa dana sudah ditarik). */
+  totalFailed?: number;
   nominalDasar: number;
 }) {
   return (
     <div className="grid gap-5 md:grid-cols-3">
       {[
-        { label: "Transaksi berhasil", value: angka(totalClaimed), sub: `${angka(totalPending)} penerima masih menunggu klaim`, icon: <Ledger className="h-[18px] w-[18px]" /> },
+        { label: "Transaksi berhasil", value: angka(totalClaimed), sub: `${angka(totalPending)} penerima masih menunggu klaim${totalFailed > 0 ? ` · ${angka(totalFailed)} tidak diklaim` : ""}`, icon: <Ledger className="h-[18px] w-[18px]" /> },
         { label: "Nominal per keluarga", value: rupiahRingkas(nominalDasar), sub: "skema flat menghindari kebocoran peringkat kemiskinan di ledger", icon: <Scale className="h-[18px] w-[18px]" /> },
         { label: "Dana sudah tersalur", value: rupiahRingkas(nominalDasar * totalClaimed), sub: `dari ${angka(totalRecipients)} penerima terdaftar`, icon: <Cube className="h-[18px] w-[18px]" /> },
       ].map((item) => (
@@ -216,6 +219,20 @@ const AKSI_LABEL: Record<string, string> = {
   AJUKAN_SANGGAHAN: "Ajukan koreksi data",
   TERIMA_SANGGAHAN: "Koreksi data diterima",
   TOLAK_SANGGAHAN: "Koreksi data ditolak",
+  DELETE_PERIODE_PROGRAM: "Hapus periode program",
+  BATALKAN_APPROVAL: "Batalkan pengesahan",
+  danai_kontrak: "Danai kontrak",
+  klaim_tersinkron: "Klaim tercatat dari chain",
+  set_batas_klaim: "Atur batas klaim",
+  tarik_sisa_dana: "Tarik sisa dana",
+  CREATE_USER: "Buat pengguna",
+  UPDATE_USER: "Ubah pengguna",
+  RESET_PASSWORD: "Reset password pengguna",
+  GANTI_PASSWORD: "Ganti password",
+  LOGOUT: "Keluar (token dicabut)",
+  LIHAT_PII: "Lihat identitas",
+  tambah_wilayah_akses: "Tambah wilayah akses",
+  hapus_wilayah_akses: "Cabut wilayah akses",
 };
 
 function labelAksi(action: string) {

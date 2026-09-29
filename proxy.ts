@@ -7,7 +7,6 @@ const PUBLIC_PATHS = [
   "/",
   "/health",
   "/cek-status",
-  "/klaim",
   "/metodologi",
   "/transaksi",
   "/login"
@@ -39,6 +38,11 @@ const IZIN_ADMIN_TAMBAHAN: Record<string, Role[]> = {
 };
 
 function isAllowed(pathname: string, role: Role | undefined) {
+  // Halaman milik akun sendiri: cukup login, role apa pun.
+  if (pathname === "/akun" || pathname === "/notifikasi") {
+    return !!role;
+  }
+
   if (pathname.startsWith("/petugas")) {
     return role === "petugas";
   }

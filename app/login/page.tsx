@@ -29,7 +29,8 @@ const PIPELINE = [
   },
 ];
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ pesan?: string }> }) {
+  const pesan = (await searchParams).pesan === "password-diganti" ? "Password diganti. Silakan masuk dengan password baru." : undefined;
   // Statistik panel kiri dibaca dari API publik (tanpa token) — halaman login
   // memang dilihat sebelum ada sesi, jadi hanya endpoint publik yang boleh dipakai.
   const programs = await ApiClient.public.getPrograms().catch(() => []);
@@ -141,7 +142,7 @@ export default async function LoginPage() {
 
         <div className="flex flex-1 items-center justify-center py-10">
           <div className="w-full max-w-sm rounded-[12px] border border-[var(--color-line)] bg-[var(--color-card)] p-8 sm:p-9 lift-1">
-            <LoginForm />
+            <LoginForm pesan={pesan} />
           </div>
         </div>
 

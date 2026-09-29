@@ -1,10 +1,12 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { pilihPeriode } from "@/lib/actions";
+import { useRouter } from "next/navigation";
+import { hapusPeriode, pilihPeriode } from "@/lib/actions";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Eyebrow } from "@/components/ui/Eyebrow";
-import { ArrowRight, Check } from "@/components/ui/Icons";
+import { ArrowRight, Check, Cross } from "@/components/ui/Icons";
 import { angka, rupiah, rupiahRingkas, waktu } from "@/lib/format";
 import type { PeriodeProgram } from "@/lib/api";
 
@@ -29,9 +31,29 @@ const STATUS: Record<string, { label: string; tone: "ink" | "sage" | "clay" | "g
  * status, pagu, alokasi tiap periode, dan tombol untuk berpindah periode aktif.
  */
 export function DaftarPeriode({ daftar, aktifId }: { daftar: PeriodeProgram[]; aktifId: string }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [akanDihapus, setAkanDihapus] = useState<PeriodeProgram | null>(null);
+  const [menghapus, setMenghapus] = useState(false);
+  const [galat, setGalat] = useState<string | null>(null);
+
+  const hapus = async () => {
+    if (!akanDihapus) return;
+    setMenghapus(true);
+    setGalat(null);
+    try {
+      await hapusPeriode(akanDihapus.id);
+      setAkanDihapus(null);
+      router.refresh();
+    } catch (err) {
+      setGalat(err instanceof Error ? err.message : "Gagal menghapus periode.");
+    } finally {
+      setMenghapus(false);
+    }
+  };
 
   return (
+    <>
     <ul className="flex flex-col gap-3">
       {daftar.map((p) => {
         const aktif = p.id === aktifId;
@@ -56,6 +78,20 @@ export function DaftarPeriode({ daftar, aktifId }: { daftar: PeriodeProgram[]; a
               </div>
 
               <div className="flex shrink-0 items-center gap-2">
+                {p.status === "draft" && (
+                  <button
+                    onClick={() => {
+                      setGalat(null);
+                      setAkanDihapus(p);
+                    }}
+                    className="flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] text-[var(--color-alert)]
+                      ring-1 ring-[var(--hairline)] transition-all duration-500
+                      ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-ink/[0.05] active:scale-[0.97]"
+                  >
+                    <Cross className="h-3.5 w-3.5" />
+                    Hapus
+                  </button>
+                )}
                 {!aktif && (
                   <button
                     onClick={() => startTransition(() => void pilihPeriode(p.id))}
@@ -98,5 +134,19 @@ export function DaftarPeriode({ daftar, aktifId }: { daftar: PeriodeProgram[]; a
         );
       })}
     </ul>
+
+    <ConfirmDialog
+      open={!!akanDihapus}
+      onClose={() => !menghapus && setAkanDihapus(null)}
+      onConfirm={hapus}
+      loading={menghapus}
+      tone="danger"
+      title={`Hapus periode "${akanDihapus?.namaProgram ?? ""}"?`}
+      description="Hanya periode draft yang belum berisi data rumah tangga yang bisa dihapus. Penghapusan tercatat di jejak audit."
+      confirmLabel="Ya, hapus"
+    >
+      {galat && <p className="mt-3 text-[12px] leading-[1.6] text-[var(--color-alert)]">{galat}</p>}
+    </ConfirmDialog>
+    </>
   );
 }

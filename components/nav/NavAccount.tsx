@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { LogoutButton } from "./LogoutButton";
 
@@ -29,6 +30,14 @@ export function NavAccount({ role, isSuper }: { role: string; isSuper: boolean }
         </p>
       </div>
       {isSuper && <RoleSwitcher currentRole={role || "admin"} />}
+      <div className="flex gap-3 px-2 text-[12px]">
+        <Link href="/notifikasi" className="text-[var(--color-ink-2)] underline-offset-2 hover:underline">
+          Notifikasi
+        </Link>
+        <Link href="/akun" className="text-[var(--color-ink-2)] underline-offset-2 hover:underline">
+          Ganti password
+        </Link>
+      </div>
       <LogoutButton />
     </div>
   );

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Hash } from "@/components/ui/Hash";
 import { Alert, Check, Coins } from "@/components/ui/Icons";
 import { EXPLORER_BASE } from "@/lib/constants";
-import { rupiah } from "@/lib/format";
+import { rupiah, waktu } from "@/lib/format";
 import { ApiClient, type ClaimProof, type ClaimStatus } from "@/lib/api";
 import {
   dompetTersedia,
@@ -156,6 +156,15 @@ export function KlaimOnchain({ status, onTercatat }: { status: ClaimStatus; onTe
     );
   }
 
+  if (proof.klaim_ditutup) {
+    return (
+      <Kotak judul="Masa klaim sudah berakhir">
+        Batas waktu klaim periode ini{proof.batas_klaim ? ` (${waktu(proof.batas_klaim)})` : ""} sudah lewat, sehingga
+        kontrak menolak klaim baru. Hubungi pendamping desa bila Anda belum menerima dana.
+      </Kotak>
+    );
+  }
+
   if (proof.jenis_wallet === "custodial") {
     // deriveCustodialWallet() di backend hanya menghasilkan alamat placeholder tanpa
     // private key. Mengklaim ke sana memindahkan dana ke alamat yang tidak bisa
@@ -173,6 +182,9 @@ export function KlaimOnchain({ status, onTercatat }: { status: ClaimStatus; onTe
       <Kotak judul={`Tarik ${rupiah(proof.amount)} ke dompet Anda`}>
         Transaksi ditandatangani dari dompet browser di jaringan <span className="text-ink-2">{proof.network}</span>. Boleh
         dikirim oleh Anda sendiri atau pendamping desa — dana selalu masuk ke dompet tujuan di atas.
+        {proof.batas_klaim && (
+          <span className="mt-2 block text-ink-2">Klaim paling lambat {waktu(proof.batas_klaim)}.</span>
+        )}
         {!adaDompet && (
           <span className="mt-2 block text-ink-2">
             Dompet browser tidak terdeteksi. Pastikan MetaMask terpasang di browser ini (bukan mode incognito) dan akses

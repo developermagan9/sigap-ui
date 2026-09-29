@@ -127,13 +127,13 @@ export function CekKlaim() {
               {hasil && !loading && (
                 <div className="mt-8">
                   <div className={`rounded-[1.5rem] p-1 ring-1 ${
-                    hasil.status === "claimed" ? "bg-sage-soft ring-sage/20" : "bg-gold/8 ring-gold/20"
+                    hasil.status === "claimed" ? "bg-sage-soft ring-sage/20" : hasil.status === "failed" ? "bg-paper-2 ring-[var(--hairline)]" : "bg-gold/8 ring-gold/20"
                   }`}>
                     <div className="rounded-[calc(1.5rem-0.25rem)] bg-card p-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
-                          <Eyebrow tone={hasil.status === "claimed" ? "sage" : "gold"}>
-                            {hasil.status === "claimed" ? "Sudah diterima" : "Menunggu klaim"}
+                          <Eyebrow tone={hasil.status === "claimed" ? "sage" : hasil.status === "failed" ? "ink" : "gold"}>
+                            {hasil.status === "claimed" ? "Sudah diterima" : hasil.status === "failed" ? "Tidak diklaim" : "Menunggu klaim"}
                           </Eyebrow>
                           <p className="mt-4 font-display text-[2.5rem] leading-none tnum tracking-[-0.035em]">
                             {rupiah(hasil.amount)}
@@ -172,6 +172,12 @@ export function CekKlaim() {
                           "Simulasi berhasil…") — lihat 07-Security-Privacy-Ethics.md §7.
                           KlaimOnchain mengirim transaksi sungguhan, dan status baru berubah
                           setelah backend membaca event FundDisbursed dari chain. */}
+                      {hasil.status === "failed" && (
+                        <p className="mt-7 border-t border-[var(--hairline)] pt-6 text-[13px] leading-6 text-ink-3">
+                          Dana ini tidak diklaim sampai batas waktu yang ditetapkan, sehingga sisa dana sudah
+                          dikembalikan ke kas program. Hubungi pendamping desa bila menurut Anda ini keliru.
+                        </p>
+                      )}
                       {hasil.status === "pending" && (
                         <div className="mt-7 border-t border-[var(--hairline)] pt-6">
                           <KlaimOnchain status={hasil} onTercatat={setelahTercatat} />
