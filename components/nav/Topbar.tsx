@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { ClientIcon } from "./ClientIcon";
 import { MobileDrawer } from "./MobileDrawer";
 
@@ -20,10 +21,13 @@ export function Topbar({
   role,
   username,
   isSuper,
+  belumDibaca = 0,
 }: {
   role: string;
   username: string;
   isSuper: boolean;
+  /** Notifikasi in-app belum dibaca; hanya bermakna untuk pengguna yang login. */
+  belumDibaca?: number;
 }) {
   const now = useJamSekarang();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -62,13 +66,20 @@ export function Topbar({
           </div>
 
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            <button
-              type="button"
-              aria-label="Notifikasi"
-              className="relative grid h-10 w-10 place-items-center rounded-md border border-transparent text-[var(--color-ink-3)] transition-colors hover:border-[var(--color-line)] hover:bg-white"
-            >
-              <ClientIcon icon="ph:bell-duotone" className="text-lg" />
-            </button>
+            {role && (
+              <Link
+                href="/notifikasi"
+                aria-label={belumDibaca > 0 ? `Notifikasi, ${belumDibaca} belum dibaca` : "Notifikasi"}
+                className="relative grid h-10 w-10 place-items-center rounded-md border border-transparent text-[var(--color-ink-3)] transition-colors hover:border-[var(--color-line)] hover:bg-white"
+              >
+                <ClientIcon icon="ph:bell-duotone" className="text-lg" />
+                {belumDibaca > 0 && (
+                  <span className="absolute right-1 top-1 min-w-4 rounded-full bg-[var(--color-alert)] px-1 text-center font-mono text-[10px] leading-4 text-white">
+                    {belumDibaca > 99 ? "99+" : belumDibaca}
+                  </span>
+                )}
+              </Link>
+            )}
             <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-[var(--color-line)] bg-white text-xs font-semibold uppercase text-[var(--color-primary)]">
               {username ? username.substring(0, 2) : "GU"}
             </div>

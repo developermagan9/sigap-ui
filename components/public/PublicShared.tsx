@@ -110,7 +110,7 @@ export function TransactionsTable({ rows }: { rows: PublicTransaksi[] }) {
               <td className="py-4 pr-4 font-mono text-[13px] tnum">{rupiah(tx.amount)}</td>
               <td className="py-4 pr-4">
                 <StatusChip tone={tx.status === "claimed" ? "ok" : "netral"}>
-                  {tx.status === "claimed" ? "tersalur" : tx.status === "failed" ? "gagal" : "menunggu klaim"}
+                  {tx.status === "claimed" ? "tersalur" : tx.status === "failed" ? "tidak diklaim" : "menunggu klaim"}
                 </StatusChip>
               </td>
               <td className="py-4 pr-4">

@@ -9,6 +9,7 @@ import { Alert, Check, Cross, Filter, Search } from "@/components/ui/Icons";
 import { angka, rupiah } from "@/lib/format";
 import type { RumahTanggaRow } from "@/lib/api";
 import { verifyRumahTangga } from "@/lib/actions";
+import { PanelIdentitas } from "./PanelIdentitas";
 
 type Keputusan = "verified" | "rejected";
 
@@ -185,6 +186,11 @@ export function Antrean({ baris }: { baris: RumahTanggaRow[] }) {
                                 </div>
                               ))}
                             </div>
+
+                            {/* Di-mount hanya saat baris dibuka: tiap pemuatan meninggalkan
+                                entri `LIHAT_PII` di audit log, jadi identitas tidak ditarik
+                                untuk baris yang cuma terlewat saat menggulir. */}
+                            {terbuka && <PanelIdentitas id={r.id} />}
 
                             <div className="mt-5">
                               <p className="text-[12px] font-medium">

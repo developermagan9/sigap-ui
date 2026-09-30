@@ -11,7 +11,7 @@ import { Stat } from "@/components/ui/Stat";
 import { ArrowRight, Cube, Layers, Ledger, Scale, ShieldCheck, Users } from "@/components/ui/Icons";
 import { BobotList, ClusterSummaryCards } from "@/components/admin/AdminShared";
 import { PengaturanAlokasi } from "@/components/admin/PengaturanAlokasi";
-import { ApiClient } from "@/lib/api";
+import { ApiClient, type SkemaAlokasi } from "@/lib/api";
 import { angka, rupiah, rupiahRingkas } from "@/lib/format";
 
 const STATUS = [
@@ -155,6 +155,8 @@ export default async function HalamanAdminPeriode({
               awal={{
                 anggaranTotal: periode.anggaranTotal,
                 nominalDasar: periode.nominalDasar,
+
+                skemaAlokasi: periode.skemaAlokasi as SkemaAlokasi,
               }}
             />
           </div>
@@ -226,6 +228,8 @@ export default async function HalamanAdminPeriode({
           initialRanking={ranking.results as any}
           clusterIndexTarget={periode.clusterPrioritas}
           nominalDasar={periode.nominalDasar}
+
+          skemaAlokasi={periode.skemaAlokasi as any}
           terkunci={periode.status === "approved" || periode.status === "disbursed"}
         />
       </section>

@@ -51,6 +51,10 @@ async function isiForm(page: Page, opts: { nik: string; noKk: string; nama: stri
   await pilihWilayah(page);
   await page.getByPlaceholder('RT 01 / RW 05').fill('RT 01 / RW 05, Jl. Uji Otomatis No. 7');
 
+  // Wallet mandiri wajib sejak 2026-09-22 — tanpa ini tombol simpan menolak
+  // dengan toast "lengkapi seluruh kolom wajib" dan form tidak pernah terkirim.
+  await page.getByPlaceholder('0x1234...5678').fill('0x1234567890abcdef1234567890abcdef12345678');
+
   // Satu anggota (kepala keluarga) — NIK-nya wajib sama dengan NIK kepala di atas.
   await page.getByPlaceholder('Nama anggota').fill(opts.nama);
   await page.getByPlaceholder('NIK anggota').fill(opts.nik);
@@ -59,6 +63,30 @@ async function isiForm(page: Page, opts: { nik: string; noKk: string; nama: stri
   await page.getByRole('button', { name: /simpan data rumah tangga/i }).click();
   await page.getByRole('button', { name: /ya, simpan/i }).click();
 }
+
+/**
+ * Petugas hanya boleh mendata desa di wilayah kerjanya. Akses ke Balecatur (desa
+ * yang dipilih pilihWilayah) diberikan di sini lewat API admin, bukan diandalkan
+ * dari seed — wilayah akun demo bisa berubah lewat halaman Pengguna.
+ */
+test.beforeAll(async ({ request }) => {
+  const API = process.env.E2E_API_URL || 'http://localhost:3001/v1';
+  const login = await request.post(`${API}/auth/login`, { data: { username: 'admin', password: 'password123' } });
+  const auth = { Authorization: `Bearer ${(await login.json()).access_token}` };
+
+  const wilayah: { id: string; kode: string | null }[] = await (await request.get(`${API}/wilayah`, { headers: auth })).json();
+  const balecatur = wilayah.find((w) => w.kode === '34.04.01.2001');
+  expect(balecatur, 'wilayah Balecatur belum ada — jalankan npm run prisma:seed di sigap-api').toBeTruthy();
+
+  const users: { id: string; username: string; wilayah: { id: string } | null; wilayah_tambahan: { id: string }[] }[] =
+    await (await request.get(`${API}/users`, { headers: auth })).json();
+  const petugas = users.find((u) => u.username === 'petugas')!;
+  const punya = petugas.wilayah?.id === balecatur!.id || petugas.wilayah_tambahan.some((w) => w.id === balecatur!.id);
+  if (!punya) {
+    const res = await request.post(`${API}/users/${petugas.id}/wilayah`, { headers: auth, data: { wilayah_id: balecatur!.id } });
+    expect(res.ok(), await res.text()).toBeTruthy();
+  }
+});
 
 test.describe('Pendataan petugas', () => {
   test('menyimpan KK baru lalu muncul di riwayat', async ({ page }) => {
@@ -73,6 +101,30 @@ test.describe('Pendataan petugas', () => {
 
     // Riwayat menampilkan hash NIK, bukan NIK asli — jadi yang dicek adalah
     // bertambahnya baris berstatus menunggu verifikasi, bukan nama/NIK-nya.
+    await expect(page.getByText(/menunggu|pending/i).first()).toBeVisible();
+  });
+
+  test('cookie periode basi (periode non-draft) tidak menyasarkan input', async ({ page }) => {
+    // Kasus nyata 2026-09-22: cookie sigap_periode sisa sesi admin menunjuk periode
+    // berstatus alokasi, KK tersimpan di sana dan tidak muncul di mana pun.
+    await loginPetugas(page);
+    const token = (await page.context().cookies()).find((c) => c.name === 'sigap_token')!.value;
+    const API = process.env.E2E_API_URL || 'http://localhost:3001/v1';
+    const daftar = await (await page.request.get(`${API}/periode-program`, { headers: { Authorization: `Bearer ${token}` } })).json();
+    const periode: { id: string; status: string; namaProgram: string }[] = daftar.data ?? daftar;
+    const basi = periode.find((p) => p.status !== 'draft');
+    test.skip(!basi, 'tidak ada periode non-draft untuk dijadikan cookie basi');
+    const { hostname } = new URL(page.url());
+    await page.context().addCookies([{ name: 'sigap_periode', value: basi!.id, domain: hostname, path: '/' }]);
+
+    await page.goto('/petugas/pendataan');
+    const keterangan = page.locator('p', { hasText: 'Data masuk ke periode' });
+    await expect(keterangan).toBeVisible();
+    await expect(keterangan).not.toContainText(basi!.namaProgram);
+
+    const nik = nikUnik(3);
+    await isiForm(page, { nik, noKk: nik, nama: `Uji Cookie ${nik.slice(-6)}` });
+    await page.waitForURL('**/petugas/riwayat');
     await expect(page.getByText(/menunggu|pending/i).first()).toBeVisible();
   });
 

@@ -36,6 +36,39 @@ export type RumahTanggaRow = {
   wilayah: { desa: string };
 };
 
+/** Skema pembagian nominal per penerima — 05-Algorithm-Design.md §5.2. */
+export type SkemaAlokasi = 'flat' | 'berjenjang' | 'proporsional';
+
+/** Satu anggota keluarga, sudah didekripsi backend. */
+export type AnggotaKeluarga = {
+  id: string;
+  nama: string;
+  nik: string;
+  hubungan: 'kepala' | 'istri_suami' | 'anak' | 'orang_tua' | 'famili_lain';
+  tanggal_lahir: string;
+  status_disabilitas: boolean;
+  is_tanggungan: boolean;
+};
+
+/**
+ * Detail satu rumah tangga dari `GET /rumah-tangga/:id` — satu-satunya tempat PII
+ * (nama, alamat, NIK, anggota keluarga) keluar dari backend. Setiap pemanggilan
+ * tercatat di audit log sebagai `LIHAT_PII`, jadi jangan panggil untuk memuat
+ * daftar: hanya saat pengguna benar-benar membuka satu berkas.
+ */
+export type RumahTanggaDetail = RumahTanggaRow & {
+  wilayahId: string;
+  periodeId: string | null;
+  identitas: {
+    nama_kepala_keluarga: string;
+    nik_kepala_keluarga: string;
+    no_kk: string;
+    alamat_detail: string;
+  } | null;
+  anggota: AnggotaKeluarga[];
+  wilayah: { desa: string; kecamatan: string; kabupaten: string; provinsi: string };
+};
+
 /** Bentuk `periode_program` dari backend, sudah dinormalisasi (lihat catatan Decimal di bawah). */
 export type PeriodeProgram = {
   id: string;
@@ -55,6 +88,8 @@ export type PeriodeProgram = {
   merkleRoot: string | null;
   contractAddress: string | null;
   txHash: string | null;
+  batasKlaim?: string | null;
+  klaimDitutupAt?: string | null;
   status: string;
   silhouetteScore: number | null;
   createdAt: string;
@@ -63,6 +98,20 @@ export type PeriodeProgram = {
 
 /** Satu wilayah KERJA program dari `GET /wilayah`. `kode` null hanya untuk baris
  *  lama yang dibuat sebelum referensi Kepmendagri dipakai. */
+/** Satu baris `GET /users` (users.service.ts findAll()). */
+export type PenggunaRow = {
+  id: string;
+  username: string;
+  nama: string;
+  role: 'admin' | 'verifikator' | 'petugas' | 'auditor';
+  isActive: boolean;
+  lastLoginAt: string | null;
+  /** Wilayah utama (`users.wilayah_id`). */
+  wilayah: Omit<WilayahRow, 'kode'> | null;
+  /** Wilayah akses tambahan (`user_wilayah`). Kewenangan efektif = utama + tambahan. */
+  wilayah_tambahan: Omit<WilayahRow, 'kode'>[];
+};
+
 export type WilayahRow = {
   id: string;
   kode: string | null;
@@ -162,6 +211,7 @@ export type PublicTransaksi = {
  *  camelCase di komponen, itu membuat seluruh kartu hasil terisi `undefined`. */
 export type ClaimStatus = {
   reference: string;
+  periode_id: string;
   status: 'pending' | 'claimed' | 'failed';
   amount: number;
   wallet: string;
@@ -174,14 +224,66 @@ export type ClaimStatus = {
   leaf_hash: string;
 };
 
-/** Ringkasan `GET /public/disbursement-summary`. */
-export type DisbursementSummary = {
-  program: string | null;
-  total_anggaran: number;
-  total_tersalur: number;
-  jumlah_penerima: number;
-  per_wilayah: { desa: string; jumlah_penerima: number; total_dana: number; total_cair: number }[];
-  transaksi_terbaru: { tx_hash: string; amount: number; timestamp: string; recipient_ref: string }[];
+/** Hasil `GET /periode-program/:id/claim-proof` (blockchain.service.ts getClaimProof()) —
+ *  argumen persis untuk `BansosDisbursement.claim()`. Endpoint ini publik: proof bukan
+ *  rahasia, isinya sudah terkunci di Merkle root. */
+export type ClaimProof = {
+  periode_id: string;
+  recipient: string;
+  amount: number;
+  nik_hash: string;
+  proof: string[];
+  sudah_diklaim: boolean;
+  /** Alamat BansosDisbursement. `null` = kontrak belum dideploy (mode simulasi). */
+  contract_address: string | null;
+  registry_address: string | null;
+  periode_id_onchain: number;
+  chain_id: number;
+  network: string;
+  jenis_wallet: 'mandiri' | 'custodial';
+  /** Status record ini; `failed` = tidak diklaim sampai batas waktu. */
+  status?: 'pending' | 'claimed' | 'failed';
+  /** Batas waktu klaim on-chain (ISO), `null` = belum ditetapkan. */
+  batas_klaim?: string | null;
+  /** Masa klaim sudah lewat atau sisa dana sudah ditarik — `claim()` pasti revert. */
+  klaim_ditutup?: boolean;
+};
+
+/** Satu notifikasi (`GET /notifikasi`, `GET /notifikasi/outbox-sms`). */
+export type NotifikasiRow = {
+  id: string;
+  kanal: 'in_app' | 'sms_mock';
+  userId: string | null;
+  tujuan: string | null;
+  judul: string;
+  pesan: string;
+  entityType: string | null;
+  entityId: string | null;
+  dibacaAt: string | null;
+  createdAt: string;
+};
+
+/** Status penyaluran on-chain (`GET /periode-program/:id/disbursement-status`). */
+export type DisbursementStatus = {
+  total_recipients: number;
+  total_claimed: number;
+  /** Tidak diklaim sampai batas waktu (ditandai saat sisa dana ditarik). */
+  total_failed: number;
+  total_pending: number;
+  /** `null` selama periode masih mode simulasi — belum ada alamat kontrak nyata untuk ditautkan. */
+  explorer_url: string | null;
+  /** Saldo kontrak vs Σ nominal penerima yang belum klaim. `null` = belum on-chain / RPC tidak terjangkau. */
+  dana_onchain: { saldo_kontrak: number; kebutuhan: number; cukup: boolean } | null;
+  batas_klaim: string | null;
+  klaim_ditutup: boolean;
+  sisa_dana_ditarik: number | null;
+  tx_tarik_sisa: string | null;
+};
+
+/** Hasil `GET /periode-program/:id/clustering-result`. */
+export type ClusteringResult = {
+  silhouette_score: number | null;
+  clusters: { id: string; clusterIndex: number; label: string; centroid: Record<string, number>; jumlahAnggota: number }[];
 };
 
 /** Prisma `Decimal` serialize jadi STRING di JSON (bukan number) — dikonfirmasi lewat panggilan
@@ -203,6 +305,14 @@ function normalizePeriode(p: any): PeriodeProgram {
     sisaAnggaran: p.sisaAnggaran == null ? null : Number(p.sisaAnggaran),
     silhouetteScore: p.silhouetteScore == null ? null : Number(p.silhouetteScore),
   };
+}
+
+/** Galat balasan API — `status` dipakai pemanggil untuk membedakan "tidak ada" (404) dari layanan mati. */
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string) {
+    super(message);
+    this.name = "ApiError";
+  }
 }
 
 export async function fetchApi<T>(
@@ -233,9 +343,13 @@ export async function fetchApi<T>(
     try {
       errorData = await response.json();
     } catch {
-      throw new Error(`API error: ${response.status} ${response.statusText}`);
+      throw new ApiError(`API error: ${response.status} ${response.statusText}`, response.status);
     }
-    throw new Error(errorData?.error?.message || `API error: ${response.status}`);
+    throw new ApiError(
+      errorData?.error?.message || `API error: ${response.status}`,
+      response.status,
+      errorData?.error?.code,
+    );
   }
 
   return response.json();
@@ -243,9 +357,10 @@ export async function fetchApi<T>(
 
 export const ApiClient = {
   public: {
-    getDisbursementSummary: () => fetchApi<DisbursementSummary>('/public/disbursement-summary'),
     checkClaimStatus: (q: string) =>
       fetchApi<ClaimStatus>(`/public/claim-status?q=${encodeURIComponent(q)}`),
+    getClaimProof: (periodeId: string, wallet: string) =>
+      fetchApi<ClaimProof>(`/periode-program/${periodeId}/claim-proof?wallet=${encodeURIComponent(wallet)}`),
     getPrograms: async (): Promise<PublicProgram[]> =>
       (await fetchApi<{ programs: PublicProgram[] }>('/public/programs')).programs,
     getProgramDetail: (id: string) => fetchApi<PublicProgramDetail>(`/public/programs/${id}`),
@@ -263,6 +378,51 @@ export const ApiClient = {
       }>(`/public/transactions${q ? `?${q}` : ''}`);
     },
   },
+  users: {
+    getAll: (token?: string) => fetchApi<PenggunaRow[]>('/users', { token }),
+    tambahWilayah: (userId: string, wilayahId: string, token?: string) =>
+      fetchApi<PenggunaRow>(`/users/${userId}/wilayah`, {
+        method: 'POST',
+        body: JSON.stringify({ wilayah_id: wilayahId }),
+        token,
+      }),
+    hapusWilayah: (userId: string, wilayahId: string, token?: string) =>
+      fetchApi<PenggunaRow>(`/users/${userId}/wilayah/${wilayahId}`, { method: 'DELETE', token }),
+    create: (
+      data: { username: string; nama: string; role: PenggunaRow['role']; password: string; wilayah_id?: string },
+      token?: string,
+    ) => fetchApi<PenggunaRow>('/users', { method: 'POST', body: JSON.stringify(data), token }),
+    update: (
+      userId: string,
+      data: { nama?: string; role?: PenggunaRow['role']; wilayah_id?: string | null; is_active?: boolean },
+      token?: string,
+    ) => fetchApi<PenggunaRow>(`/users/${userId}`, { method: 'PATCH', body: JSON.stringify(data), token }),
+    resetPassword: (userId: string, passwordBaru: string, token?: string) =>
+      fetchApi<{ success: boolean }>(`/users/${userId}/reset-password`, {
+        method: 'POST',
+        body: JSON.stringify({ password_baru: passwordBaru }),
+        token,
+      }),
+  },
+  notifikasi: {
+    milikSaya: (opts: { belumDibaca?: boolean; page?: number; limit?: number } = {}, token?: string) => {
+      const q = new URLSearchParams();
+      if (opts.belumDibaca) q.set('belum_dibaca', 'true');
+      if (opts.page) q.set('page', String(opts.page));
+      if (opts.limit) q.set('limit', String(opts.limit));
+      return fetchApi<{ data: NotifikasiRow[]; total: number; belum_dibaca: number; page: number; limit: number }>(
+        `/notifikasi${q.size ? `?${q}` : ''}`,
+        { token },
+      );
+    },
+    outboxSms: (page = 1, limit = 20, token?: string) =>
+      fetchApi<{ data: NotifikasiRow[]; total: number; page: number; limit: number }>(
+        `/notifikasi/outbox-sms?page=${page}&limit=${limit}`,
+        { token },
+      ),
+    tandaiDibaca: (id: string, token?: string) => fetchApi(`/notifikasi/${id}/dibaca`, { method: 'PATCH', token }),
+    tandaiSemuaDibaca: (token?: string) => fetchApi<{ ditandai: number }>('/notifikasi/dibaca-semua', { method: 'POST', token }),
+  },
   audit: {
     getAll: (page = 1, limit = 20, token?: string) =>
       fetchApi<{ data: AuditLogRow[]; meta: { total: number; page: number; limit: number; totalPages: number } }>(
@@ -271,7 +431,8 @@ export const ApiClient = {
       ),
   },
   auth: {
-    login: (data: any) => fetchApi('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
+    gantiPassword: (data: { password_lama: string; password_baru: string }, token?: string) =>
+      fetchApi('/auth/ganti-password', { method: 'POST', body: JSON.stringify(data), token }),
   },
   periode: {
     getAll: async (token?: string): Promise<PeriodeProgram[]> =>
@@ -310,6 +471,7 @@ export const ApiClient = {
       normalizePeriode(await fetchApi<any>('/periode-program', { method: 'POST', body: JSON.stringify(data), token })),
     update: async (id: string, data: Record<string, unknown>, token?: string): Promise<PeriodeProgram> =>
       normalizePeriode(await fetchApi<any>(`/periode-program/${id}`, { method: 'PATCH', body: JSON.stringify(data), token })),
+    remove: (id: string, token?: string) => fetchApi<{ id: string; dihapus: boolean }>(`/periode-program/${id}`, { method: 'DELETE', token }),
   },
   rumahTangga: {
     getAll: async (
@@ -325,6 +487,11 @@ export const ApiClient = {
       const qs = params.toString();
       const res = await fetchApi<{ data: any[]; meta: any }>(`/rumah-tangga${qs ? `?${qs}` : ''}`, { token });
       return { data: res.data.map(normalizeRumahTangga), meta: res.meta };
+    },
+    /** Detail + PII terdekripsi. Tercatat `LIHAT_PII` di audit log tiap panggilan. */
+    getDetail: async (id: string, token?: string): Promise<RumahTanggaDetail> => {
+      const r = await fetchApi<any>(`/rumah-tangga/${id}`, { token });
+      return { ...normalizeRumahTangga(r), ...r } as RumahTanggaDetail;
     },
     create: (data: any, token?: string) => fetchApi('/rumah-tangga', { method: 'POST', body: JSON.stringify(data), token }),
     verify: (id: string, data: any, token?: string) => fetchApi(`/rumah-tangga/${id}/verifikasi`, { method: 'PATCH', body: JSON.stringify(data), token }),
@@ -364,25 +531,39 @@ export const ApiClient = {
   mining: {
     runClustering: (id: string, data: any, token?: string) => fetchApi(`/periode-program/${id}/run-clustering`, { method: 'POST', body: JSON.stringify(data), token }),
     getClustering: (id: string, token?: string) =>
-      fetchApi<{ clusters: any[]; silhouette_score: number | null }>(`/periode-program/${id}/clustering-result`, { token }),
+      fetchApi<ClusteringResult>(`/periode-program/${id}/clustering-result`, { token }),
     runTopsis: (id: string, data: any, token?: string) => fetchApi(`/periode-program/${id}/run-topsis`, { method: 'POST', body: JSON.stringify(data), token }),
     getRanking: (id: string, token?: string) => fetchApi<{ results: any[] }>(`/periode-program/${id}/ranking-result`, { token }),
     runAlokasi: (id: string, data: any, token?: string) => fetchApi(`/periode-program/${id}/run-alokasi`, { method: 'POST', body: JSON.stringify(data), token }),
     finalizeRanking: (id: string, data: any, token?: string) => fetchApi(`/periode-program/${id}/finalize-ranking`, { method: 'POST', body: JSON.stringify(data), token }),
+    batalkanApproval: (id: string, alasan: string, token?: string) =>
+      fetchApi(`/periode-program/${id}/batalkan-approval`, { method: 'POST', body: JSON.stringify({ alasan }), token }),
   },
   blockchain: {
     buildMerkle: (id: string, token?: string) => fetchApi(`/periode-program/${id}/build-merkle`, { method: 'POST', token }),
     submitOnchain: (id: string, token?: string) => fetchApi(`/periode-program/${id}/submit-onchain`, { method: 'POST', token }),
-    getStatus: (id: string, token?: string) =>
-      fetchApi<{
-        total_recipients: number;
-        total_claimed: number;
-        total_pending: number;
-        /** `null` selama periode masih mode simulasi — belum ada alamat kontrak nyata untuk ditautkan. */
-        explorer_url: string | null;
-      }>(
-        `/periode-program/${id}/disbursement-status`,
-        { token },
+    danaiKontrak: (id: string, token?: string) =>
+      fetchApi<{ sudah_cukup: boolean; deposit: number; saldo_kontrak: number; kebutuhan: number; tx_hash: string | null }>(
+        `/periode-program/${id}/danai-kontrak`,
+        { method: 'POST', token },
       ),
+    syncKlaim: (id: string, token?: string) =>
+      fetchApi<{ klaim_baru: number; total_claimed: number; dipindai_sampai_blok: number }>(
+        `/periode-program/${id}/sync-klaim`,
+        { method: 'POST', token },
+      ),
+    setBatasKlaim: (id: string, batasKlaim: string, token?: string) =>
+      fetchApi<{ batas_klaim: string; tx_hash: string }>(`/periode-program/${id}/batas-klaim`, {
+        method: 'POST',
+        body: JSON.stringify({ batas_klaim: batasKlaim }),
+        token,
+      }),
+    tarikSisa: (id: string, tujuan: string | undefined, token?: string) =>
+      fetchApi<{ tx_hash: string | null; jumlah_ditarik: number; tujuan: string; record_tidak_diklaim: number }>(
+        `/periode-program/${id}/tarik-sisa`,
+        { method: 'POST', body: JSON.stringify(tujuan ? { tujuan } : {}), token },
+      ),
+    getStatus: (id: string, token?: string) =>
+      fetchApi<DisbursementStatus>(`/periode-program/${id}/disbursement-status`, { token }),
   },
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Bezel } from "@/components/ui/Bezel";
 import { Button } from "@/components/ui/Button";
 import { Eyebrow } from "@/components/ui/Eyebrow";
@@ -8,7 +8,8 @@ import { Hash } from "@/components/ui/Hash";
 import { Alert, Check, Coins, Search } from "@/components/ui/Icons";
 import { EXPLORER_BASE } from "@/lib/constants";
 import { rupiah, waktu } from "@/lib/format";
-import { ApiClient, type ClaimStatus } from "@/lib/api";
+import { ApiClient, ApiError, type ClaimStatus } from "@/lib/api";
+import { KlaimOnchain } from "./KlaimOnchain";
 
 export function CekKlaim() {
   const [q, setQ] = useState("");
@@ -17,21 +18,30 @@ export function CekKlaim() {
   const [loading, setLoading] = useState(false);
   const [errorNotFound, setErrorNotFound] = useState(false);
   const [errorLain, setErrorLain] = useState<string | null>(null);
+  const [kunciPrivat, setKunciPrivat] = useState(false);
+
+  const setelahTercatat = useCallback((s: ClaimStatus) => setHasil(s), []);
 
   const jalankan = async (v: string) => {
     setQ(v);
     setCari(v);
-    setLoading(true);
     setErrorNotFound(false);
     setErrorLain(null);
     setHasil(null);
 
+    // 0x + 64 hex = private key, bukan alamat (0x + 40). Jangan pernah dikirim:
+    // query string tercatat di log server/proxy dan riwayat browser.
+    const privat = /^0x[0-9a-fA-F]{64}$/.test(v.trim());
+    setKunciPrivat(privat);
+    if (privat) return;
+
+    setLoading(true);
     try {
-      const res = await ApiClient.public.checkClaimStatus(v);
+      const res = await ApiClient.public.checkClaimStatus(v.trim());
       setHasil(res);
     } catch (e: unknown) {
       const pesan = e instanceof Error ? e.message : String(e);
-      if (pesan.includes("404")) {
+      if (e instanceof ApiError && e.status === 404) {
         setErrorNotFound(true);
       } else {
         // Gagal jaringan/5xx tidak boleh berakhir senyap di console — sebelumnya
@@ -76,6 +86,20 @@ export function CekKlaim() {
               </form>
 
               {/* ---------- Hasil ---------- */}
+              {cari && kunciPrivat && (
+                <div className="mt-8 flex items-start gap-3 rounded-2xl bg-clay-soft p-5 ring-1 ring-clay/40">
+                  <span className="mt-px text-clay"><Alert className="h-4 w-4" /></span>
+                  <div>
+                    <p className="text-[13px] font-medium">Itu private key, bukan alamat dompet</p>
+                    <p className="mt-2 text-[12px] leading-[1.65] text-ink-3">
+                      Pencarian tidak dikirim. Private key tidak boleh dibagikan ke siapa pun — siapa yang memegangnya
+                      menguasai dompet itu. Masukkan alamat dompet (0x + 40 karakter, terlihat di MetaMask di bawah nama
+                      akun) atau kode penerima REC-XXXX.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {cari && errorNotFound && !loading && (
                 <div className="mt-8 flex items-start gap-3 rounded-2xl bg-paper-2 p-5 ring-1 ring-[var(--hairline)]">
                   <span className="mt-px text-ink-3"><Alert className="h-4 w-4" /></span>
@@ -103,13 +127,13 @@ export function CekKlaim() {
               {hasil && !loading && (
                 <div className="mt-8">
                   <div className={`rounded-[1.5rem] p-1 ring-1 ${
-                    hasil.status === "claimed" ? "bg-sage-soft ring-sage/20" : "bg-gold/8 ring-gold/20"
+                    hasil.status === "claimed" ? "bg-sage-soft ring-sage/20" : hasil.status === "failed" ? "bg-paper-2 ring-[var(--hairline)]" : "bg-gold/8 ring-gold/20"
                   }`}>
                     <div className="rounded-[calc(1.5rem-0.25rem)] bg-card p-6">
                       <div className="flex flex-wrap items-start justify-between gap-4">
                         <div>
-                          <Eyebrow tone={hasil.status === "claimed" ? "sage" : "gold"}>
-                            {hasil.status === "claimed" ? "Sudah diterima" : "Menunggu klaim"}
+                          <Eyebrow tone={hasil.status === "claimed" ? "sage" : hasil.status === "failed" ? "ink" : "gold"}>
+                            {hasil.status === "claimed" ? "Sudah diterima" : hasil.status === "failed" ? "Tidak diklaim" : "Menunggu klaim"}
                           </Eyebrow>
                           <p className="mt-4 font-display text-[2.5rem] leading-none tnum tracking-[-0.035em]">
                             {rupiah(hasil.amount)}
@@ -144,29 +168,19 @@ export function CekKlaim() {
                         ))}
                       </dl>
 
-                      {/* Tombol klaim di sini dulunya palsu: `setTimeout(1400)` lalu
-                          mengumumkan "Simulasi berhasil. Rp X dikirim ke dompet di atas,
-                          event FundDisbursed tercatat publik." Tidak ada transaksi yang
-                          dikirim, tidak ada event yang tercatat, dan record tetap `pending`
-                          — persis "menyamarkan simulasi sebagai transaksi nyata" yang
-                          dilarang 07-Security-Privacy-Ethics.md §7, dan yang justru
-                          dinyatakan tidak dilakukan oleh 16-Konfigurasi-Kredensial.md §3.
-                          Penandatanganan klaim lewat wallet warga/relayer belum dibangun,
-                          jadi status ditampilkan apa adanya. */}
+                      {/* Dulu di sini ada tombol klaim palsu (`setTimeout(1400)` lalu
+                          "Simulasi berhasil…") — lihat 07-Security-Privacy-Ethics.md §7.
+                          KlaimOnchain mengirim transaksi sungguhan, dan status baru berubah
+                          setelah backend membaca event FundDisbursed dari chain. */}
+                      {hasil.status === "failed" && (
+                        <p className="mt-7 border-t border-[var(--hairline)] pt-6 text-[13px] leading-6 text-ink-3">
+                          Dana ini tidak diklaim sampai batas waktu yang ditetapkan, sehingga sisa dana sudah
+                          dikembalikan ke kas program. Hubungi pendamping desa bila menurut Anda ini keliru.
+                        </p>
+                      )}
                       {hasil.status === "pending" && (
                         <div className="mt-7 border-t border-[var(--hairline)] pt-6">
-                          <div className="flex items-start gap-3 rounded-2xl bg-paper-2 p-4 ring-1 ring-[var(--hairline)]">
-                            <span className="mt-px text-ink-3"><Coins className="h-4 w-4" /></span>
-                            <div>
-                              <p className="text-[12px] font-medium text-ink-2">Dana belum ditarik</p>
-                              <p className="mt-2 text-[12px] leading-[1.65] text-ink-3">
-                                Anda terdaftar sebagai penerima dan bukti Merkle Anda sudah terkunci
-                                pada root periode ini. Penarikan dilakukan lewat pendamping desa —
-                                penandatanganan klaim langsung dari dompet warga belum tersedia di
-                                portal ini.
-                              </p>
-                            </div>
-                          </div>
+                          <KlaimOnchain status={hasil} onTercatat={setelahTercatat} />
                         </div>
                       )}
                     </div>

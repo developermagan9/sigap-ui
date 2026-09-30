@@ -10,8 +10,13 @@ import { angka } from "@/lib/format";
 export default async function HalamanHasilClustering() {
   const token = (await cookies()).get("sigap_token")?.value;
   const periodeId = await getPeriodeAktifId(token);
-  const periode = await ApiClient.periode.getById(periodeId, token);
-  const clusters = (periode.clusterResults ?? []).slice().sort((a, b) => a.clusterIndex - b.clusterIndex);
+  // Endpoint khusus hasil clustering (urut cluster_index, + silhouette) — bukan
+  // lagi menumpang `include` di detail periode.
+  const [periode, hasil] = await Promise.all([
+    ApiClient.periode.getById(periodeId, token),
+    ApiClient.mining.getClustering(periodeId, token),
+  ]);
+  const clusters = hasil.clusters;
   const totalAnggota = clusters.reduce((s, c) => s + c.jumlahAnggota, 0);
 
   const rumahTangga = await ApiClient.rumahTangga.getAll(
@@ -96,7 +101,7 @@ export default async function HalamanHasilClustering() {
                     Kualitas pemisahan
                   </p>
                   <p className="mt-3 font-mono text-[2rem] leading-none text-[var(--color-accent)]">
-                    {periode.silhouetteScore === null ? "—" : periode.silhouetteScore.toFixed(3)}
+                    {hasil.silhouette_score === null ? "—" : hasil.silhouette_score.toFixed(3)}
                   </p>
                   <p className="mt-2 text-[12px] leading-relaxed text-[var(--color-ink-3)]">
                     Silhouette score untuk k = {periode.kCluster}. Rentang -1 sampai 1; makin tinggi berarti

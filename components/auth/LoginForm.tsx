@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "@/components/ui/Icons";
 import { LoadingButton } from "@/components/ui/LoadingButton";
 
-export function LoginForm() {
+export function LoginForm({ pesan }: { pesan?: string } = {}) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -60,6 +60,12 @@ export function LoginForm() {
       <p className="mt-2 text-[13px] leading-relaxed text-ink-3">
         Khusus untuk admin, verifikator, dan petugas lapangan.
       </p>
+
+      {pesan && !error && (
+        <div className="mt-5 rounded bg-sage-soft px-3.5 py-2.5 text-center text-[13px] text-sage ring-1 ring-sage/20">
+          {pesan}
+        </div>
+      )}
 
       {error && (
         <div className="mt-5 rounded bg-clay-soft px-3.5 py-2.5 text-center text-[13px] text-clay ring-1 ring-clay/20">

@@ -11,6 +11,7 @@ export default async function HalamanApproval() {
   const periodeId = await getPeriodeAktifId(token);
   const periode = await ApiClient.periode.getById(periodeId, token);
   const bisaSahkan = periode.status === "alokasi" || periode.status === "reviewed";
+  const bisaBatalkan = periode.status === "approved" && !periode.txHash;
 
   return (
     <main className="overflow-x-hidden pb-16 pt-8">
@@ -43,6 +44,7 @@ export default async function HalamanApproval() {
                 totalAlokasi={periode.totalAlokasi ?? 0}
                 merkleRoot={periode.merkleRoot}
                 bisaSahkan={bisaSahkan}
+                bisaBatalkan={bisaBatalkan}
               />
             </section>
           </Reveal>

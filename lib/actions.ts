@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { ApiClient, type ImportCsvResult } from "./api";
+import { ApiClient, type ImportCsvResult, type PenggunaRow, type RumahTanggaDetail, type SkemaAlokasi } from "./api";
 import { COOKIE_PERIODE } from "./periode";
 
 async function getToken(): Promise<string> {
@@ -14,10 +14,23 @@ async function getToken(): Promise<string> {
 
 /** Baca `sub` (user id) dari payload JWT tanpa verifikasi ulang — token ini
  *  sudah divalidasi backend tiap request lewat header Authorization; di sini
- *  cuma dipakai untuk mengisi field `approvedBy` di body request. */
+ *  cuma dipakai untuk mengisi field `approvedBy` di body request (backend tetap
+ *  memakai id dari token, field ini hanya memenuhi validasi DTO). */
 function userIdFromToken(token: string): string {
   const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64").toString("utf8"));
   return payload.sub;
+}
+
+/**
+ * Ambil identitas satu rumah tangga (nama, alamat, NIK, anggota keluarga).
+ *
+ * Dipanggil hanya saat pengguna benar-benar membuka satu berkas — tiap panggilan
+ * meninggalkan entri `LIHAT_PII` di audit log, jadi memuatnya untuk seluruh baris
+ * daftar akan membanjiri jejak audit dan membuka PII yang tidak ada yang minta.
+ */
+export async function getDetailRumahTangga(id: string): Promise<RumahTanggaDetail> {
+  const token = await getToken();
+  return ApiClient.rumahTangga.getDetail(id, token);
 }
 
 export async function verifyRumahTangga(id: string, status: "verified" | "rejected", catatan?: string) {
@@ -27,9 +40,21 @@ export async function verifyRumahTangga(id: string, status: "verified" | "reject
   return result;
 }
 
+async function simpanPeriodeAktif(periodeId: string) {
+  (await cookies()).set(COOKIE_PERIODE, periodeId, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+}
+
 export async function createRumahTangga(data: Record<string, unknown>) {
   const token = await getToken();
   const result = await ApiClient.rumahTangga.create(data, token);
+  // Riwayat/Tugas memfilter periode aktif; tanpa ini data yang baru disimpan ke
+  // periode draft tidak muncul di riwayat bila periode aktifnya periode lain.
+  await simpanPeriodeAktif(String(data.periode_id));
   revalidatePath("/petugas/tugas");
   revalidatePath("/petugas/riwayat");
   return result;
@@ -64,16 +89,17 @@ export async function runTopsisAndAlokasi(
   bobotKriteria: Record<string, number>,
   clusterIndexTarget: number[],
   nominalDasar: number,
+  skemaAlokasi: SkemaAlokasi = "flat",
 ) {
   const token = await getToken();
   await ApiClient.mining.runTopsis(periodeId, { clusterIndexTarget, bobotKriteria }, token);
-  // Skema alokasi selalu "flat": setiap keluarga yang lolos cutoff dapat
-  // nominal yang sama rata, tidak dibedakan per tingkat cluster (skema
-  // `berjenjang`/`proporsional` didukung backend tapi sengaja tidak dipilih
-  // dari UI ini). Biaya operasional selalu 0 — seluruh pagu disalurkan penuh.
+  // Ketiga skema di 05-Algorithm-Design.md §5.2 bisa dipilih dari UI. Sebelumnya
+  // nilai ini dipaku "flat" di sini, sehingga `berjenjang`/`proporsional` yang
+  // sudah dihitung & teruji di backend tidak pernah bisa dijangkau operator.
+  // Biaya operasional tetap 0 — seluruh pagu disalurkan penuh.
   const alokasi = await ApiClient.mining.runAlokasi(
     periodeId,
-    { skemaAlokasi: "flat", nominalDasar, biayaOperasional: 0 },
+    { skemaAlokasi, nominalDasar, biayaOperasional: 0 },
     token,
   );
   const ranking = await ApiClient.mining.getRanking(periodeId, token);
@@ -93,6 +119,13 @@ export async function finalizeRanking(periodeId: string, catatan: string) {
   return result;
 }
 
+export async function batalkanApproval(periodeId: string, alasan: string) {
+  const token = await getToken();
+  const result = await ApiClient.mining.batalkanApproval(periodeId, alasan, token);
+  revalidatePath("/", "layout");
+  return result;
+}
+
 export async function buildMerkle(periodeId: string) {
   const token = await getToken();
   const result = await ApiClient.blockchain.buildMerkle(periodeId, token);
@@ -107,6 +140,99 @@ export async function submitOnchain(periodeId: string) {
   return result;
 }
 
+export async function tambahWilayahPengguna(userId: string, wilayahId: string) {
+  const token = await getToken();
+  const result = await ApiClient.users.tambahWilayah(userId, wilayahId, token);
+  revalidatePath("/admin/pengguna");
+  return result;
+}
+
+export async function hapusWilayahPengguna(userId: string, wilayahId: string) {
+  const token = await getToken();
+  const result = await ApiClient.users.hapusWilayah(userId, wilayahId, token);
+  revalidatePath("/admin/pengguna");
+  return result;
+}
+
+export async function buatPengguna(data: {
+  username: string;
+  nama: string;
+  role: PenggunaRow["role"];
+  password: string;
+  wilayah_id?: string;
+}) {
+  const token = await getToken();
+  const result = await ApiClient.users.create(data, token);
+  revalidatePath("/admin/pengguna");
+  return result;
+}
+
+export async function ubahPengguna(
+  userId: string,
+  data: { nama?: string; role?: PenggunaRow["role"]; wilayah_id?: string | null; is_active?: boolean },
+) {
+  const token = await getToken();
+  const result = await ApiClient.users.update(userId, data, token);
+  revalidatePath("/admin/pengguna");
+  return result;
+}
+
+export async function resetPasswordPengguna(userId: string, passwordBaru: string) {
+  const token = await getToken();
+  return ApiClient.users.resetPassword(userId, passwordBaru, token);
+}
+
+/** Ganti password sendiri. Backend mencabut semua token lama, jadi cookie sesi
+ *  ikut dihapus di sini — pemanggil mengarahkan pengguna ke halaman login. */
+export async function gantiPassword(passwordLama: string, passwordBaru: string) {
+  const token = await getToken();
+  await ApiClient.auth.gantiPassword({ password_lama: passwordLama, password_baru: passwordBaru }, token);
+  const jar = await cookies();
+  for (const nama of ["sigap_token", "sigap_role", "sigap_username"]) jar.delete(nama);
+  return { success: true };
+}
+
+export async function tandaiNotifikasiDibaca(id: string) {
+  const token = await getToken();
+  await ApiClient.notifikasi.tandaiDibaca(id, token);
+  revalidatePath("/", "layout");
+}
+
+export async function tandaiSemuaNotifikasiDibaca() {
+  const token = await getToken();
+  const result = await ApiClient.notifikasi.tandaiSemuaDibaca(token);
+  revalidatePath("/", "layout");
+  return result;
+}
+
+export async function syncKlaim(periodeId: string) {
+  const token = await getToken();
+  const result = await ApiClient.blockchain.syncKlaim(periodeId, token);
+  revalidatePath("/admin/on-chain");
+  return result;
+}
+
+export async function setBatasKlaim(periodeId: string, batasKlaimIso: string) {
+  const token = await getToken();
+  const result = await ApiClient.blockchain.setBatasKlaim(periodeId, batasKlaimIso, token);
+  revalidatePath("/admin/on-chain");
+  return result;
+}
+
+export async function tarikSisaDana(periodeId: string, tujuan?: string) {
+  const token = await getToken();
+  const result = await ApiClient.blockchain.tarikSisa(periodeId, tujuan, token);
+  revalidatePath("/admin/on-chain");
+  return result;
+}
+
+export async function danaiKontrak(periodeId: string) {
+  const token = await getToken();
+  const result = await ApiClient.blockchain.danaiKontrak(periodeId, token);
+  revalidatePath("/admin/on-chain");
+  return result;
+}
+
 /** Ganti periode program yang sedang dilihat (FE-5 / item O).
  *
  *  Disimpan di cookie, bukan query param, supaya kedelapan halaman admin/petugas
@@ -115,13 +241,7 @@ export async function submitOnchain(periodeId: string) {
  *  `revalidatePath("/", "layout")` membuang cache seluruh pohon rute sekaligus,
  *  jadi tidak ada halaman yang tertinggal menampilkan periode lama. */
 export async function pilihPeriode(periodeId: string) {
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_PERIODE, periodeId, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 30,
-  });
+  await simpanPeriodeAktif(periodeId);
   revalidatePath("/", "layout");
 }
 
@@ -138,10 +258,18 @@ export async function createPeriode(data: {
   const periode = await ApiClient.periode.create(data, token);
   // Periode yang baru dibuat langsung jadi periode aktif — kalau tidak, admin
   // harus memilihnya manual dulu sebelum bisa mengisi data ke dalamnya.
-  const cookieStore = await cookies();
-  cookieStore.set(COOKIE_PERIODE, periode.id, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+  await simpanPeriodeAktif(periode.id);
   revalidatePath("/", "layout");
   return periode;
+}
+
+export async function hapusPeriode(id: string) {
+  const token = await getToken();
+  const result = await ApiClient.periode.remove(id, token);
+  const jar = await cookies();
+  if (jar.get(COOKIE_PERIODE)?.value === id) jar.delete(COOKIE_PERIODE);
+  revalidatePath("/", "layout");
+  return result;
 }
 
 export async function updatePeriode(id: string, data: Record<string, unknown>) {
@@ -176,6 +304,7 @@ export async function importRumahTanggaCsv(formData: FormData): Promise<ImportCs
   }
   const periodeId = (formData.get("periode_id") as string | null) || undefined;
   const result = await ApiClient.rumahTangga.importCsv(file, periodeId, token);
+  if (periodeId && result.sukses > 0) await simpanPeriodeAktif(periodeId);
   revalidatePath("/petugas/tugas");
   revalidatePath("/petugas/riwayat");
   revalidatePath("/admin/verifikasi");
