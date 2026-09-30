@@ -47,10 +47,6 @@ function isAllowed(pathname: string, role: Role | undefined) {
     return role === "petugas";
   }
 
-  if (pathname === "/verifikator") {
-    return role === "admin" || role === "verifikator";
-  }
-
   if (pathname.startsWith("/admin")) {
     if (role === "admin") return true;
     const tambahan = IZIN_ADMIN_TAMBAHAN[pathname];

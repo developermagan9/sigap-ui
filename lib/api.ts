@@ -431,8 +431,6 @@ export const ApiClient = {
       ),
   },
   auth: {
-    login: (data: any) => fetchApi('/auth/login', { method: 'POST', body: JSON.stringify(data) }),
-    logout: (token?: string) => fetchApi('/auth/logout', { method: 'POST', token }),
     gantiPassword: (data: { password_lama: string; password_baru: string }, token?: string) =>
       fetchApi('/auth/ganti-password', { method: 'POST', body: JSON.stringify(data), token }),
   },

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 
 export async function GET(request: Request) {
-  // Cabut token di backend (tokenVersion naik), bukan hanya menghapus cookie —
+  // Cabut token di backend (jti masuk `revoked_token`), bukan hanya menghapus cookie —
   // salinan token yang bocor/tersimpan di tempat lain ikut tidak berlaku lagi.
   // Gagal di sini (API mati, token sudah kedaluwarsa) tidak menghalangi logout lokal.
   const token = (await cookies()).get("sigap_token")?.value;
