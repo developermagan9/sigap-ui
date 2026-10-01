@@ -36,7 +36,9 @@ const JARINGAN: Record<number, { chainName: string; rpcUrls: string[]; blockExpl
   },
   31337: {
     chainName: "Hardhat Lokal",
-    rpcUrls: ["http://127.0.0.1:8545"],
+    // Di VPS node Hardhat tidak ada di 127.0.0.1 milik browser pengguna, jadi alamatnya
+    // diisi saat build (NEXT_PUBLIC_HARDHAT_RPC). Default-nya untuk dev lokal.
+    rpcUrls: [process.env.NEXT_PUBLIC_HARDHAT_RPC || "http://127.0.0.1:8545"],
     nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
   },
 };
