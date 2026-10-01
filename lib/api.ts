@@ -36,6 +36,17 @@ export type RumahTanggaRow = {
   wilayah: { desa: string };
 };
 
+/** `meta.ringkasan` dari `GET /rumah-tangga`: hitungan seluruh cakupan wilayah+periode
+ *  pemanggil (tidak ikut tersaring `status`/`flagged`). `perlu_cek_duplikat` = ditandai
+ *  mirip DAN masih pending. Opsional karena API lama belum mengirimnya. */
+export type RingkasanRumahTangga = {
+  total: number;
+  pending: number;
+  verified: number;
+  rejected: number;
+  perlu_cek_duplikat: number;
+};
+
 /** Skema pembagian nominal per penerima — 05-Algorithm-Design.md §5.2. */
 export type SkemaAlokasi = 'flat' | 'berjenjang' | 'proporsional';
 
@@ -475,13 +486,17 @@ export const ApiClient = {
   },
   rumahTangga: {
     getAll: async (
-      filters?: { periode_id?: string; wilayah_id?: string; status?: string; page?: number; limit?: number },
+      filters?: { periode_id?: string; wilayah_id?: string; status?: string; flagged?: boolean; page?: number; limit?: number },
       token?: string,
-    ): Promise<{ data: RumahTanggaRow[]; meta: { total: number; page: number; limit: number; totalPages: number } }> => {
+    ): Promise<{
+      data: RumahTanggaRow[];
+      meta: { total: number; page: number; limit: number; totalPages: number; ringkasan?: RingkasanRumahTangga };
+    }> => {
       const params = new URLSearchParams();
       if (filters?.periode_id) params.set('periode_id', filters.periode_id);
       if (filters?.wilayah_id) params.set('wilayah_id', filters.wilayah_id);
       if (filters?.status) params.set('status', filters.status);
+      if (filters?.flagged) params.set('flagged', 'true');
       if (filters?.page) params.set('page', String(filters.page));
       if (filters?.limit) params.set('limit', String(filters.limit));
       const qs = params.toString();

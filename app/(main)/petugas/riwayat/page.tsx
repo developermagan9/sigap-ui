@@ -1,14 +1,16 @@
 import { cookies } from "next/headers";
 import { Reveal } from "@/components/ui/Reveal";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { PetugasStatsGrid, RiwayatList } from "@/components/petugas/PetugasShared";
+import { PetugasStatsGrid, RiwayatList, ringkasanDariBaris } from "@/components/petugas/PetugasShared";
 import { ApiClient } from "@/lib/api";
 import { getPeriodeAktifId } from "@/lib/periode";
 
 export default async function HalamanRiwayatPetugas() {
   const token = (await cookies()).get("sigap_token")?.value;
   const periodeId = await getPeriodeAktifId(token);
-  const { data } = await ApiClient.rumahTangga.getAll({ periode_id: periodeId, limit: 100 }, token);
+  // API mengurutkan terbaru dulu, dan RiwayatList menampilkan 8 teratas.
+  const { data, meta } = await ApiClient.rumahTangga.getAll({ periode_id: periodeId, limit: 8 }, token);
+  const ringkasan = meta.ringkasan ?? ringkasanDariBaris(data);
 
   return (
     <main className="overflow-x-hidden pb-16 pt-8">
@@ -22,7 +24,7 @@ export default async function HalamanRiwayatPetugas() {
 
       <section className="px-4 pt-8 pb-16 sm:px-8">
         <div className="mx-auto max-w-[78rem]">
-          <PetugasStatsGrid items={data} />
+          <PetugasStatsGrid ringkasan={ringkasan} />
         </div>
       </section>
 

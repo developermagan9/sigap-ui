@@ -11,7 +11,7 @@ export default async function HalamanVerifikasiAdmin() {
   const periodeId = await getPeriodeAktifId(token);
 
   const [rumahTangga, summary, periode] = await Promise.all([
-    ApiClient.rumahTangga.getAll({ periode_id: periodeId, limit: 100 }, token),
+    ApiClient.rumahTangga.getAll({ periode_id: periodeId, status: "pending", limit: 100 }, token),
     ApiClient.periode.getSummary(periodeId, token),
     ApiClient.periode.getById(periodeId, token),
   ]);
@@ -19,7 +19,9 @@ export default async function HalamanVerifikasiAdmin() {
   // Antrean = berkas yang belum diputuskan. Berkas yang ditandai (flaggedDuplicate)
   // tetap tampil selama masih pending, tapi tidak lagi muncul selamanya begitu
   // sudah diputuskan verifikator — beda dari perilaku data mock sebelumnya.
-  const antrean = rumahTangga.data.filter((r) => r.statusVerifikasi === "pending");
+  // Disaring `pending` di server (bukan dipotong dari 100 baris campuran), jadi jumlah
+  // di judul memakai total sebenarnya walau daftar yang dimuat dibatasi 100.
+  const antrean = rumahTangga.data;
 
   return (
     <main className="overflow-x-hidden pb-16 pt-8">
@@ -27,7 +29,7 @@ export default async function HalamanVerifikasiAdmin() {
         <PageHeader
           eyebrow="Portal Admin"
           title="Antrian Verifikasi"
-          description={`${angka(antrean.length)} berkas masih menunggu keputusan approve/reject.`}
+          description={`${angka(rumahTangga.meta.total)} berkas masih menunggu keputusan approve/reject.`}
         />
       </div>
 

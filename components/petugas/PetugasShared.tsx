@@ -5,7 +5,7 @@ import { ArrowRight, Check, Doc, Ledger, Users } from "@/components/ui/Icons";
 import { angka, persen, rupiah, waktu } from "@/lib/format";
 import { AjukanKoreksi } from "./AjukanKoreksi";
 import { LihatIdentitas } from "./LihatIdentitas";
-import type { RumahTanggaRow } from "@/lib/api";
+import type { RingkasanRumahTangga, RumahTanggaRow } from "@/lib/api";
 
 export function SummaryRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
   return (
@@ -18,6 +18,29 @@ export function SummaryRow({ label, value, mono = false }: { label: string; valu
   );
 }
 
+/** Label kartu tugas. "Ditandai" hanya berlaku selama berkas masih pending — begitu
+ *  verifikator memutuskan, tanda mirip tidak lagi perlu dicek (sama dengan
+ *  `perlu_cek_duplikat` di API dan dengan RiwayatList). */
+function labelTugas(r: RumahTanggaRow): { label: "ditandai" | "menunggu review" | "disetujui"; catatan: string } {
+  if (r.statusVerifikasi === "verified") return { label: "disetujui", catatan: "Sudah disetujui verifikator." };
+  if (r.flaggedDuplicate) return { label: "ditandai", catatan: "Ditandai mirip data lain — perlu review manual." };
+  return { label: "menunggu review", catatan: "Menunggu keputusan verifikator." };
+}
+
+/** Hitungan cadangan dari baris yang dimuat, dipakai hanya bila API belum mengirim
+ *  `meta.ringkasan` (API lama). Pada data > 1 halaman angkanya hanya perkiraan. */
+export function ringkasanDariBaris(items: RumahTanggaRow[]): RingkasanRumahTangga {
+  const hitung = (s: RumahTanggaRow["statusVerifikasi"]) => items.filter((r) => r.statusVerifikasi === s).length;
+  return {
+    total: items.length,
+    pending: hitung("pending"),
+    verified: hitung("verified"),
+    rejected: hitung("rejected"),
+    perlu_cek_duplikat: items.filter((r) => r.flaggedDuplicate && r.statusVerifikasi === "pending").length,
+  };
+}
+
+/** Kartu tugas aktif. Pemanggil yang menentukan urutan/prioritasnya (data ditandai lebih dulu). */
 export function PetugasTaskCards({ items }: { items: RumahTanggaRow[] }) {
   const candidates = items.filter((r) => r.statusVerifikasi !== "rejected").slice(0, 6);
 
@@ -27,7 +50,7 @@ export function PetugasTaskCards({ items }: { items: RumahTanggaRow[] }) {
         <p className="text-[13px] text-[var(--color-ink-3)]">Tidak ada tugas aktif untuk periode ini.</p>
       )}
       {candidates.map((item, index) => {
-        const status = item.flaggedDuplicate ? "ditandai" : item.statusVerifikasi === "pending" ? "menunggu review" : "diproses";
+        const { label: status, catatan } = labelTugas(item);
         return (
           <Reveal key={item.id} delay={index * 70}>
             <article className="rule-card h-full p-6">
@@ -36,9 +59,7 @@ export function PetugasTaskCards({ items }: { items: RumahTanggaRow[] }) {
                 <span className="font-mono text-[11px] text-[var(--color-ink-4)]">{item.id.slice(0, 8)}</span>
               </div>
               <h3 className="mt-6 text-[1.5rem]">{item.wilayah.desa}</h3>
-              <p className="mt-3 text-[13px] leading-6 text-[var(--color-ink-3)]">
-                {item.flaggedDuplicate ? "Ditandai mirip data lain — perlu review manual." : "Menunggu keputusan verifikator."}
-              </p>
+              <p className="mt-3 text-[13px] leading-6 text-[var(--color-ink-3)]">{catatan}</p>
               <LihatIdentitas id={item.id} />
               <div className="mt-6">
                 <Button href="/petugas/pendataan" icon={<ArrowRight className="h-4 w-4" />}>
@@ -53,17 +74,24 @@ export function PetugasTaskCards({ items }: { items: RumahTanggaRow[] }) {
   );
 }
 
-export function PetugasStatsGrid({ items }: { items: RumahTanggaRow[] }) {
-  const pending = items.filter((r) => r.statusVerifikasi === "pending").length;
-  const flagged = items.filter((r) => r.flaggedDuplicate).length;
-  const verified = items.filter((r) => r.statusVerifikasi === "verified").length;
-  const successRate = verified / Math.max(items.length, 1);
+export function PetugasStatsGrid({ ringkasan }: { ringkasan: RingkasanRumahTangga }) {
+  const { pending, verified, rejected, perlu_cek_duplikat: perluCek } = ringkasan;
+  // Rasio hanya dari berkas yang sudah diputuskan: berkas pending belum menandakan
+  // kualitas baik atau buruk, jadi tidak boleh ikut jadi penyebut.
+  const diputuskan = verified + rejected;
 
   const stats = [
     { label: "Entri menunggu review", value: angka(pending), body: "Masih perlu keputusan verifikator." },
-    { label: "Perlu cek duplikat", value: angka(flagged), body: "Ditandai untuk review manual, bukan otomatis ditolak." },
+    { label: "Perlu cek duplikat", value: angka(perluCek), body: "Ditandai mirip data lain dan belum diputuskan. Bukan otomatis ditolak." },
     { label: "Lolos verifikasi", value: angka(verified), body: "Sudah siap ikut tahap clustering dan ranking." },
-    { label: "Rasio lolos saat ini", value: persen(successRate), body: "Gambaran kualitas input lapangan terhadap data periode ini." },
+    {
+      label: "Rasio lolos dari yang diputuskan",
+      value: diputuskan === 0 ? "–" : persen(verified / diputuskan),
+      body:
+        diputuskan === 0
+          ? "Belum ada keputusan verifikator pada periode ini."
+          : `${angka(verified)} disetujui dari ${angka(diputuskan)} berkas yang sudah diputuskan.`,
+    },
   ];
 
   return (
@@ -113,14 +141,17 @@ export function RiwayatList({ items }: { items: RumahTanggaRow[] }) {
   const entries = items.slice(0, 8).map((r) => ({
     id: r.id,
     desa: r.wilayah.desa,
-    status: r.statusVerifikasi === "verified" ? "verified" : r.flaggedDuplicate ? "flagged" : r.statusVerifikasi,
+    status:
+      r.statusVerifikasi === "pending" && r.flaggedDuplicate ? "flagged" : r.statusVerifikasi,
     pendapatanPerKapita: r.pendapatanPerKapita,
     note:
       r.statusVerifikasi === "verified"
         ? "Lolos review lapangan."
-        : r.flaggedDuplicate
-          ? "Perlu pemeriksaan manual oleh verifikator."
-          : "Menunggu keputusan verifikator.",
+        : r.statusVerifikasi === "rejected"
+          ? "Ditolak verifikator."
+          : r.flaggedDuplicate
+            ? "Perlu pemeriksaan manual oleh verifikator."
+            : "Menunggu keputusan verifikator.",
     time: r.createdAt,
   }));
 

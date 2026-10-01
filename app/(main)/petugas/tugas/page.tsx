@@ -2,14 +2,38 @@ import { cookies } from "next/headers";
 import { Reveal } from "@/components/ui/Reveal";
 import { Button } from "@/components/ui/Button";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { PetugasStatsGrid, PetugasTaskCards } from "@/components/petugas/PetugasShared";
+import { PetugasStatsGrid, PetugasTaskCards, ringkasanDariBaris } from "@/components/petugas/PetugasShared";
 import { ApiClient } from "@/lib/api";
 import { getPeriodeAktifId } from "@/lib/periode";
+
+/** Jumlah kartu tugas yang ditampilkan di halaman ini. */
+const KARTU_TUGAS = 6;
 
 export default async function HalamanTugasPetugas() {
   const token = (await cookies()).get("sigap_token")?.value;
   const periodeId = await getPeriodeAktifId(token);
-  const { data } = await ApiClient.rumahTangga.getAll({ periode_id: periodeId, limit: 100 }, token);
+
+  // Tugas aktif = berkas yang belum diputuskan, yang ditandai mirip lebih dulu. Dua
+  // permintaan kecil ke server (bukan memotong 100 baris acak di sini) supaya berkas
+  // ditandai selalu masuk walau periode berisi ratusan data.
+  const [ditandai, menunggu] = await Promise.all([
+    ApiClient.rumahTangga.getAll({ periode_id: periodeId, status: "pending", flagged: true, limit: KARTU_TUGAS }, token),
+    ApiClient.rumahTangga.getAll({ periode_id: periodeId, status: "pending", limit: KARTU_TUGAS }, token),
+  ]);
+  const idDitandai = new Set(ditandai.data.map((r) => r.id));
+  const tugas = [...ditandai.data, ...menunggu.data.filter((r) => !idDitandai.has(r.id))].slice(0, KARTU_TUGAS);
+
+  // Periode yang berkasnya hampir semua sudah diputuskan tetap menampilkan kartu
+  // (berlabel "disetujui") alih-alih halaman kosong — itu perilaku sebelumnya, dan
+  // tombol "Lihat identitas" di kartu dipakai e2e koreksi.
+  if (tugas.length < KARTU_TUGAS) {
+    const selesai = await ApiClient.rumahTangga.getAll(
+      { periode_id: periodeId, status: "verified", limit: KARTU_TUGAS - tugas.length },
+      token,
+    );
+    tugas.push(...selesai.data);
+  }
+  const ringkasan = ditandai.meta.ringkasan ?? ringkasanDariBaris([...ditandai.data, ...menunggu.data]);
 
   return (
     <main className="overflow-x-hidden pb-16 pt-8">
@@ -23,7 +47,7 @@ export default async function HalamanTugasPetugas() {
 
       <section className="px-4 pt-8 pb-16 sm:px-8">
         <div className="mx-auto max-w-[78rem]">
-          <PetugasStatsGrid items={data} />
+          <PetugasStatsGrid ringkasan={ringkasan} />
         </div>
       </section>
 
@@ -40,7 +64,7 @@ export default async function HalamanTugasPetugas() {
           </Reveal>
 
           <div className="mt-8">
-            <PetugasTaskCards items={data} />
+            <PetugasTaskCards items={tugas} />
           </div>
         </div>
       </section>
