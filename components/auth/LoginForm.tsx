@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "@/components/ui/Icons";
 import { LoadingButton } from "@/components/ui/LoadingButton";
+import { isSuperuser } from "@/lib/constants";
 
 export function LoginForm({ pesan }: { pesan?: string } = {}) {
   const [username, setUsername] = useState("");
@@ -33,7 +34,7 @@ export function LoginForm({ pesan }: { pesan?: string } = {}) {
       const { role } = await res.json();
 
       // Redirect based on role
-      if (role === "admin" || username === "ITSUP") {
+      if (role === "admin" || isSuperuser(username)) {
         router.push("/admin/periode");
       } else if (role === "verifikator") {
         router.push("/admin/verifikasi");

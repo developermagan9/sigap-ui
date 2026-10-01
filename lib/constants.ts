@@ -13,3 +13,14 @@ export const EXPLORER_BASE =
 
 /** Label jaringan untuk ditampilkan ke pengguna. */
 export const NAMA_JARINGAN = process.env.NEXT_PUBLIC_CHAIN_NAME || "Polygon Amoy";
+
+/** Username akun super administrator. "Super admin" BUKAN role di database
+ *  (enum `UserRole` hanya admin/petugas/verifikator/auditor) — akunnya tetap
+ *  `admin` di JWT, dan statusnya hanya dikenali UI lewat username ini: label
+ *  "Super Administrator" serta penukar tampilan role saat demo. `ITSUP` adalah
+ *  akun bawaan `seed.ts`; `ITSUPPORTSIGAP` adalah nama akun di VPS. */
+const USERNAME_SUPERUSER: readonly string[] = ["ITSUP", "ITSUPPORTSIGAP"];
+
+export function isSuperuser(username?: string | null): boolean {
+  return !!username && USERNAME_SUPERUSER.includes(username);
+}

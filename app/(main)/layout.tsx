@@ -3,12 +3,13 @@ import { Sidebar } from "@/components/nav/Sidebar";
 import { MobileNav } from "@/components/nav/MobileNav";
 import { Topbar } from "@/components/nav/Topbar";
 import { ApiClient } from "@/lib/api";
+import { isSuperuser } from "@/lib/constants";
 
 export default async function MainLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
   const roleCookie = cookieStore.get("sigap_role")?.value || "";
   const usernameCookie = cookieStore.get("sigap_username")?.value || "";
-  const isSuper = usernameCookie === "ITSUP";
+  const isSuper = isSuperuser(usernameCookie);
   const token = cookieStore.get("sigap_token")?.value;
 
   // Hitungan lonceng notifikasi. Gagal (API mati, token dicabut) tidak boleh

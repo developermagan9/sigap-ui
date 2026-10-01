@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { isSuperuser } from "@/lib/constants";
 
 /** Role yang boleh dipakai lewat penukar role superuser. */
 const ROLE_VALID = ["admin", "verifikator", "petugas", "auditor"] as const;
 type RoleValid = (typeof ROLE_VALID)[number];
-
-/** Username akun superuser yang boleh berganti tampilan role saat demo. */
-const SUPERUSER = "ITSUP";
 
 /** Baca payload JWT tanpa verifikasi ulang — token ini httpOnly dan sudah
  *  divalidasi backend tiap request; di sini cuma dipakai untuk membaca `exp`
@@ -55,7 +53,7 @@ export async function POST(request: Request) {
     if (!payload) {
       return NextResponse.json({ error: "Sesi tidak valid" }, { status: 401 });
     }
-    if (payload.username !== SUPERUSER) {
+    if (!isSuperuser(payload.username)) {
       return NextResponse.json(
         { error: "Hanya akun super administrator yang dapat berganti role" },
         { status: 403 },
