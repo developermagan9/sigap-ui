@@ -21,7 +21,9 @@ pipeline {
 
     NEXT_PUBLIC_API_URL       = 'http://43.133.144.108:3001/v1'
     NEXT_PUBLIC_EXPLORER_BASE = 'https://amoy.polygonscan.com'
-    NEXT_PUBLIC_CHAIN_NAME    = 'Polygon Amoy'
+    NEXT_PUBLIC_CHAIN_NAME    = 'Hardhat VPS'
+    // RPC node Hardhat di VPS, dipakai dompet browser saat menambah jaringan 31337.
+    NEXT_PUBLIC_HARDHAT_RPC   = 'http://43.133.144.108:8545'
   }
 
   stages {
@@ -59,6 +61,7 @@ pipeline {
             --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" \
             --build-arg NEXT_PUBLIC_EXPLORER_BASE="$NEXT_PUBLIC_EXPLORER_BASE" \
             --build-arg NEXT_PUBLIC_CHAIN_NAME="$NEXT_PUBLIC_CHAIN_NAME" \
+            --build-arg NEXT_PUBLIC_HARDHAT_RPC="$NEXT_PUBLIC_HARDHAT_RPC" \
             -t "$IMAGE_NAME:$IMAGE_TAG" -t "$IMAGE_NAME:latest" .
         '''
       }
